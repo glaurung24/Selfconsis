@@ -3,17 +3,30 @@
 	<FileVersion major="1" minor="6" />
 	<Project>
 		<Option title="Selfconsis" />
+		<Option makefile_is_custom="1" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/Selfconsis" prefix_auto="1" extension_auto="1" />
+				<Option output="build/" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="build/." />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
+				<Linker>
+					<Add library="/home/andi/Documents/MasterThesis/TBTK/hdf5/hdf5-build/hdf5/lib/libhdf5.a" />
+				</Linker>
+				<MakeCommands>
+					<Build command="$make debug" />
+					<CompileFile command="$make -f $makefile $file" />
+					<Clean command="$make clean" />
+					<DistClean command="$make -f $makefile distclean$target" />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make debug &gt; $(CMD_NULL)" />
+				</MakeCommands>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/Selfconsis" prefix_auto="1" extension_auto="1" />
@@ -26,16 +39,26 @@
 				<Linker>
 					<Add option="-s" />
 				</Linker>
+				<MakeCommands>
+					<Build command="$make " />
+					<CompileFile command="$make -f $makefile $file" />
+					<Clean command="$make clean" />
+					<DistClean command="$make -f $makefile distclean$target" />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make  &gt; $(CMD_NULL)" />
+				</MakeCommands>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
-		<Unit filename="main.cpp" />
+		<Unit filename="src/main.cpp" />
 		<Extensions>
 			<code_completion />
-			<debugger />
+			<debugger>
+				<search_path add="build" />
+			</debugger>
 		</Extensions>
 	</Project>
 </CodeBlocks_project_file>
