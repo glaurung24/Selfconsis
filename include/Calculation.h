@@ -13,35 +13,49 @@ const complex<double> i(0, 1);
 class Calculation
 {
     public:
-        Calculation();
-        Calculation(std::string);
-        virtual ~Calculation();
-        void SetUpModel();
+        static void Init();
+        static void Init(string);
+        static void SetUpModel();
+        static void ScLoop();
+        static void Delete();
+
+
     protected:
     private:
-        int N = 20;
-        int SIZE_X = 4*N;
-        int SIZE_Y = 2*N+1;
-        int SPIN_D = 4;
+        Calculation();
+        virtual ~Calculation();
 
-        complex<double> mu = -4.0;
-        complex<double> t = 1.0;
-        complex<double> z = 0.5; //Zeeman coupling
-        complex<double>*** delta;
-        complex<double> deltaStart = 0.3;
-        complex<double> alpha=0.3;
 
-        Model model;
+        static void InitDelta();
+        static complex<double> FuncDelta(Index, Index);
 
-        int NUM_COEFFICIENTS = 1000;
-        int ENERGY_RESOLUTION = 2000;
-        double SCALE_FACTOR = 10.;
-        complex<double>*** delta_current;
-        complex<double>*** delta_old;
-        complex<double>*** delta_tmp;
 
-        complex<double> funcDelta(Index, Index);
-        void InitDelta();
+
+        static int N;
+        static int SIZE_X;
+        static int SIZE_Y;
+        static int SPIN_D;
+
+        static complex<double> mu;
+        static complex<double> t;
+        static complex<double> z; //Zeeman coupling
+        static complex<double>*** delta;
+        static complex<double> deltaStart;
+        static complex<double> alpha;
+        static complex<double> couplingPotential;
+
+        static Model model;
+
+        static int NUM_COEFFICIENTS;
+        static int ENERGY_RESOLUTION;
+        static double SCALE_FACTOR;
+        static complex<double>** deltaCurrent;
+        static complex<double>** deltaOld;
+        static bool checkInit;
+
+        static int numberSCRuns;
+        static int epsDelta;
+        static bool verbose;
 };
 
 #endif // CALCULATION_H

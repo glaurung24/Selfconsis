@@ -53,6 +53,9 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="include/Calculation.h" />
+		<Unit filename="include/Matrix.h" />
+		<Unit filename="src/Calculation.cpp" />
 		<Unit filename="src/main.cpp" />
 		<Extensions>
 			<code_completion />
