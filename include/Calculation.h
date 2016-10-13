@@ -2,7 +2,10 @@
 #define CALCULATION_H
 
 #include <complex>
+#include <memory>
 #include "Model.h"
+#include "ChebyshevSolver.h"
+#include "CPropertyExtractor.h"
 
 using namespace std;
 using namespace TBTK;
@@ -18,6 +21,7 @@ class Calculation
         static void SetUpModel();
         static void ScLoop();
         static void Delete();
+        static void CalcLDOS();
 
 
     protected:
@@ -28,6 +32,7 @@ class Calculation
 
         static void InitDelta();
         static complex<double> FuncDelta(Index, Index);
+        static void SwapDelta();
 
 
 
@@ -52,10 +57,14 @@ class Calculation
         static complex<double>** deltaCurrent;
         static complex<double>** deltaOld;
         static bool checkInit;
+        static bool modelSetUp;
 
         static int numberSCRuns;
         static int epsDelta;
         static bool verbose;
+        static unique_ptr<ChebyshevSolver> cSolver;
+        static unique_ptr<CPropertyExtractor> pe;
+        static string fileName;
 };
 
 #endif // CALCULATION_H
