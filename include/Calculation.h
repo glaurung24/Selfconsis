@@ -19,7 +19,7 @@ class Calculation
         static void Init();
         static void Init(string);
         static void SetUpModel();
-        static void ScLoop();
+        static void ScLoop(bool writeEachDelta = false);
         static void Delete();
         static void CalcLDOS();
 
@@ -32,7 +32,8 @@ class Calculation
 
         static void InitDelta();
         static complex<double> FuncDelta(Index, Index);
-        static void SwapDelta();
+        static vector<complex<double>> Convert2DArrayTo1DVector(complex<double>** const, int, int);
+        static complex<double>** Convert1DVectorTo2DArray(vector<complex<double>> const, int, int);
 
 
 
@@ -54,7 +55,7 @@ class Calculation
         static int NUM_COEFFICIENTS;
         static int ENERGY_RESOLUTION;
         static double SCALE_FACTOR;
-        static complex<double>** deltaCurrent;
+        static complex<double>** deltaNew;
         static complex<double>** deltaOld;
         static bool checkInit;
         static bool modelSetUp;

@@ -34,7 +34,7 @@ Model Calculation::model;
 int Calculation::NUM_COEFFICIENTS;
 int Calculation::ENERGY_RESOLUTION;
 double Calculation::SCALE_FACTOR;
-complex<double>** Calculation::deltaCurrent;
+complex<double>** Calculation::deltaNew;
 complex<double>** Calculation::deltaOld;
 bool Calculation::checkInit = false;
 bool Calculation::modelSetUp = false;
@@ -62,32 +62,36 @@ void Calculation::Init()
 
         deltaStart = 0.3;
         alpha = 0.3;
-        couplingPotential = 0.1;
+        couplingPotential = 1;
 
         InitDelta();
 
         epsDelta = 0.001;
-        numberSCRuns = 1;
+        numberSCRuns = 5;
         verbose = false;
 
         cSolver = nullptr;
         pe = nullptr;
+
+        NUM_COEFFICIENTS = 1000;
+        ENERGY_RESOLUTION = 2000;
+        SCALE_FACTOR = 10.;
 
         fileName = "TBTKResults.h5";
 }
 
 void Calculation::InitDelta()
 {
-    deltaCurrent = new complex<double>*[SIZE_X];
+    deltaNew = new complex<double>*[SIZE_X];
     deltaOld = new complex<double>*[SIZE_X];
 
     for(int i=0; i < SIZE_X; i++)
     {
-        deltaCurrent[i] = new complex<double>[SIZE_Y];
+        deltaNew[i] = new complex<double>[SIZE_Y];
         deltaOld[i] = new complex<double>[SIZE_Y];
         for(int j=0; j < SIZE_Y; j++)
         {
-            deltaCurrent[i][j] = deltaStart;
+            deltaNew[i][j] = deltaStart;
             deltaOld[i][j] = deltaStart;
         }
     }
@@ -97,10 +101,10 @@ void Calculation::Delete() //TODO seg fault!!!
 {
     for(int i=0; i < SIZE_Y; i++)
     {
-        delete deltaCurrent[i];
+        delete deltaNew[i];
         delete deltaOld[i];
     }
-    delete deltaCurrent;
+    delete deltaNew;
     delete deltaOld;
 }
 
@@ -218,25 +222,22 @@ complex<double> Calculation::FuncDelta(Index to, Index from)
     int from_y = from.at(1);
     int from_s = from.at(2);
 
-//    cout << deltaCurrent[from_x][from_y] << ", "<< from_s << endl;
+//    cout << deltaNew[from_x][from_y] << ", "<< from_s << endl;
     switch(from_s)
     {
     case 0:
-        return conj(deltaCurrent[from_x][from_y]);
+        return conj(deltaOld[from_x][from_y]);
     case 1:
-        return -conj(deltaCurrent[from_x][from_y]);
+        return -conj(deltaOld[from_x][from_y]);
     case 2:
-        return -deltaCurrent[from_x][from_y];
+        return -deltaOld[from_x][from_y];
     case 3:
-        return deltaCurrent[from_x][from_y];
+        return deltaOld[from_x][from_y];
     default:
         throw runtime_error("Something went wrong in Calculation::FuncDelta");
     }
 
-
-    cout << "delta2" << endl;
-    cout << deltaCurrent[from_x][from_y]*2.0*(0.5-from_s) << endl;
-    return deltaCurrent[from_x][from_y]*2.0*(0.5-from_s);
+    return deltaNew[from_x][from_y]*2.0*(0.5-from_s);
 //    int to_x = to.at(0);
 //    int to_y = to.at(1);
 //    int to_s = to.at(2);
@@ -244,74 +245,56 @@ complex<double> Calculation::FuncDelta(Index to, Index from)
 
 
 
-complex<double> DummyFunc(Index, Index)
-{
-    return 0.1+0.1*i;
-}
-
-
-void Calculation::ScLoop()
+void Calculation::ScLoop(bool writeEachDelta)
 {
 //    #pragma omp parallel for
 //    complex<double> pairFunction = pe.calculateExpectationValue({x,y,3},{x,y,0});
 
 //    delta_new[x][y] = -interactionValueBCS*pairFunction;
+
     if(!checkInit  & !modelSetUp)
     {
         throw runtime_error("Calculation was not Initialised or model is not set up. Run Calculation::Init() and Calculation::SetUpModel() before running Calculation::ScLoop\n");
     }
     if(!cSolver)
     {
-/*        cSolver = unique_ptr<ChebyshevSolver>( new ChebyshevSolver());
+        cSolver = unique_ptr<ChebyshevSolver>( new ChebyshevSolver());
         cSolver->setModel(&model);
-        cSolver->setScaleFactor(SCALE_FACTOR);*/
+        cSolver->setScaleFactor(SCALE_FACTOR);
     }
 
 
-//    if(!pe)
-//    {
-//        pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
-//                    NUM_COEFFICIENTS,
-//                    ENERGY_RESOLUTION,
-//                    false,
-//                    false,
-//                    true,
-//                    -SCALE_FACTOR,
-//                    SCALE_FACTOR));
-//    }
-
-
-    ChebyshevSolver cSolver2;
-    cSolver2.setModel(&model);
-    cSolver2.setScaleFactor(SCALE_FACTOR);
-
-    CPropertyExtractor pe2(&cSolver2,
+    if(!pe)
+    {
+        pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
                     NUM_COEFFICIENTS,
                     ENERGY_RESOLUTION,
                     false,
                     false,
                     true,
                     -SCALE_FACTOR,
-                    SCALE_FACTOR);
-    cSolver2.setTalkative(true);
+                    SCALE_FACTOR));
+    }
+
 
     int loopCounter = 0;
+    complex<double>** deltaTmp;
     while(loopCounter < numberSCRuns)
     {
-        deltaOld = deltaCurrent; //TODO
-        int diffDelta;
-        int diffDeltaMax;
+
+
+
+        deltaTmp = deltaOld;
+        deltaOld = deltaNew;
+        deltaNew = deltaTmp;
+        double diffDelta = 0;
+        double diffDeltaMax = 0;
         for(int x=0; x < SIZE_X; x++)
         {
             for(int y=0; y < SIZE_Y; y++)
             {
-                cout << x << " " << y << endl;
-                cout << "hej!" << endl;
-                cout << pe2.calculateExpectationValue({x,y,3},{x,y,0}) << endl;
-                cout << x << ", " << y << endl;
-//                deltaCurrent[x][y] = DummyFunc({x,y,3},{x,y,0})*couplingPotential;
-                cout << deltaCurrent[x][y] << endl;
-                diffDelta = abs(deltaCurrent[x][y]-deltaOld[x][y]);
+                deltaNew[x][y] = pe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
+                diffDelta = abs(deltaNew[x][y]-deltaOld[x][y]);
                 if(diffDelta > diffDeltaMax)
                 {
                     diffDeltaMax = diffDelta;
@@ -319,21 +302,66 @@ void Calculation::ScLoop()
             }
         }
 
+        //Switching the delta in the buffer
+
         if(!verbose)
         {
-            cout << "Loop number: " << loopCounter << ", eps= " << diffDeltaMax << endl;
+            cout << "Loop number: " << loopCounter +1 << ", eps= " << diffDeltaMax << endl;
+        }
+        if(writeEachDelta)
+        {
+            stringstream loopFileName;
+            stringstream ss;
+            loopFileName << "DeltaLoop_" << loopCounter +1;
+            ss << "Delta of loop number " << loopCounter +1;
+            vector<complex<double>> deltaOutput = Convert2DArrayTo1DVector(deltaNew, SIZE_X, SIZE_Y);
+            const int RANK = 1;
+            int dims[RANK] = {SIZE_X};
+            FileWriter::setFileName(loopFileName.str());
+            FileWriter::clear();
+            FileWriter::write(&real(deltaOutput)[0], RANK, dims, ss.str());
         }
         if(diffDeltaMax < epsDelta)
         {
             break;
             if(!verbose)
             {
-                cout << "End of SC loop after " << loopCounter <<
+                cout << "End of SC loop after " << loopCounter + 1 <<
                 " iterations, delta DeltaMax: " << diffDeltaMax << endl;
             }
         }
         loopCounter++;
     }
+}
+
+
+vector<complex<double>> Calculation::Convert2DArrayTo1DVector(complex<double>** const input, int sizeX, int sizeY)
+{
+    vector<complex<double>> out;
+    for(int i=0; i < sizeX; i++)
+    {
+        for(int j=0; j < sizeY; j++)
+        {
+            out.push_back(input[i][j]);
+        }
+    }
+    return out;
+}
+
+complex<double>** Calculation::Convert1DVectorTo2DArray(vector<complex<double>> const input, int sizeX, int sizeY) //TODO needs more testing
+{
+    complex<double>** out;
+    out = new complex<double>*[sizeX];
+
+    for(int i=0; i < sizeX; i++)
+    {
+        out[i] = new complex<double>[sizeY];
+        for(int j=0; j < sizeY; j++)
+        {
+            out[i][j] = input[j+i*sizeY];
+        }
+    }
+    return out;
 }
 
 
@@ -374,7 +402,7 @@ void Calculation::CalcLDOS()
 
     //Extract local density of states and write to file
     Property::LDOS *ldos = pe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
-                        {SIZE_X, 1, 2});
+                        {SIZE_X, 1, 4});
 
 
 
