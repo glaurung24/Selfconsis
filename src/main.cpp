@@ -38,7 +38,8 @@ int main(int argc, char **argv){
 	//Lattice size
     Calculation::Init();
     Calculation::SetUpModel();
-    Calculation::ScLoop();
+    Calculation::ScLoop(true);
+    Calculation::CalcLDOS();
 //    Calculation::Delete(); //TODO uncomment
 
     //Spin index:

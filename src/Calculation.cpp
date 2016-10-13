@@ -51,7 +51,7 @@ string Calculation::fileName;
 void Calculation::Init()
 {
         checkInit = true;
-        N = 2;
+        N = 20;
         SIZE_X = 4*N;
         SIZE_Y = 2*N+1;
         SPIN_D = 4;
@@ -66,15 +66,14 @@ void Calculation::Init()
 
         InitDelta();
 
-        epsDelta = 0.001;
-        numberSCRuns = 5;
-        verbose = false;
+        epsDelta = 0.05;
+        numberSCRuns = 9;
 
         cSolver = nullptr;
         pe = nullptr;
 
-        NUM_COEFFICIENTS = 1000;
-        ENERGY_RESOLUTION = 2000;
+        NUM_COEFFICIENTS = 2000;
+        ENERGY_RESOLUTION = 4000;
         SCALE_FACTOR = 10.;
 
         fileName = "TBTKResults.h5";
@@ -278,6 +277,21 @@ void Calculation::ScLoop(bool writeEachDelta)
 
 
     int loopCounter = 0;
+
+    if(writeEachDelta)
+    {
+        stringstream loopFileNameAbs;
+        stringstream loopFileNameArg;
+        loopFileNameAbs << "DeltaLoop_" << loopCounter << ".h5";
+        vector<complex<double>> deltaOutput = Convert2DArrayTo1DVector(deltaNew, SIZE_X, SIZE_Y);
+        const int RANK = 2;
+        int dims[RANK] = {SIZE_X, SIZE_Y};
+        FileWriter::setFileName(loopFileNameAbs.str());
+        FileWriter::clear();
+        FileWriter::write(&getAbsVec(deltaOutput)[0], RANK, dims, "DeltaAbs");
+        FileWriter::write(&getPhaseVec(deltaOutput)[0], RANK, dims, "DeltaArg");
+    }
+
     complex<double>** deltaTmp;
     while(loopCounter < numberSCRuns)
     {
@@ -289,6 +303,7 @@ void Calculation::ScLoop(bool writeEachDelta)
         deltaNew = deltaTmp;
         double diffDelta = 0;
         double diffDeltaMax = 0;
+        double deltaRel = 1;
         for(int x=0; x < SIZE_X; x++)
         {
             for(int y=0; y < SIZE_Y; y++)
@@ -298,42 +313,63 @@ void Calculation::ScLoop(bool writeEachDelta)
                 if(diffDelta > diffDeltaMax)
                 {
                     diffDeltaMax = diffDelta;
+                    deltaRel = diffDeltaMax/abs(deltaNew[x][y]);
                 }
             }
         }
+        setBoundary(deltaNew);
 
-        //Switching the delta in the buffer
 
         if(!verbose)
         {
-            cout << "Loop number: " << loopCounter +1 << ", eps= " << diffDeltaMax << endl;
+            cout << "Loop number: " << loopCounter +1 << ", rel eps= " << deltaRel << endl;
         }
         if(writeEachDelta)
         {
-            stringstream loopFileName;
-            stringstream ss;
-            loopFileName << "DeltaLoop_" << loopCounter +1;
-            ss << "Delta of loop number " << loopCounter +1;
+            stringstream loopFileNameAbs;
+            stringstream loopFileNameArg;
+            loopFileNameAbs << "DeltaLoop_" << loopCounter +1 << ".h5";
             vector<complex<double>> deltaOutput = Convert2DArrayTo1DVector(deltaNew, SIZE_X, SIZE_Y);
-            const int RANK = 1;
-            int dims[RANK] = {SIZE_X};
-            FileWriter::setFileName(loopFileName.str());
+            const int RANK = 2;
+            int dims[RANK] = {SIZE_X, SIZE_Y};
+            FileWriter::setFileName(loopFileNameAbs.str());
             FileWriter::clear();
-            FileWriter::write(&real(deltaOutput)[0], RANK, dims, ss.str());
+            FileWriter::write(&getAbsVec(deltaOutput)[0], RANK, dims, "DeltaAbs");
+            FileWriter::write(&getPhaseVec(deltaOutput)[0], RANK, dims, "DeltaArg");
         }
-        if(diffDeltaMax < epsDelta)
+        if(deltaRel < epsDelta)
         {
-            break;
             if(!verbose)
             {
                 cout << "End of SC loop after " << loopCounter + 1 <<
-                " iterations, delta DeltaMax: " << diffDeltaMax << endl;
+                " iterations, reltive delta Delta: " << deltaRel << endl;
             }
+            break;
         }
         loopCounter++;
     }
 }
 
+
+vector<double> Calculation::getAbsVec(vector<complex<double>> input)
+{
+    vector<double> output;
+    for(unsigned int i=0; i < input.size(); i++)
+    {
+        output.push_back(abs(input[i]));
+    }
+    return output;
+}
+
+vector<double> Calculation::getPhaseVec(vector<complex<double>> input)
+{
+    vector<double> output;
+    for(unsigned int i=0; i < input.size(); i++)
+    {
+        output.push_back(arg(input[i]));
+    }
+    return output;
+}
 
 vector<complex<double>> Calculation::Convert2DArrayTo1DVector(complex<double>** const input, int sizeX, int sizeY)
 {
@@ -346,6 +382,33 @@ vector<complex<double>> Calculation::Convert2DArrayTo1DVector(complex<double>** 
         }
     }
     return out;
+}
+
+void Calculation::setBoundary(complex<double>** input)
+{
+    //Upper y boundary
+    for(int i=0; i < SIZE_X; i++)
+    {
+        input[i][SIZE_Y-1] = deltaStart;
+    }
+
+    //Lower y boundary
+    for(int i=0; i < SIZE_X; i++)
+    {
+        input[i][0]= deltaStart;
+    }
+
+    //left x boundary
+    for(int i=0; i < SIZE_Y; i++)
+    {
+        input[0][i] = deltaStart;
+    }
+
+    //Right x boundary
+    for(int i=0; i < SIZE_Y; i++)
+    {
+        input[SIZE_X-1][i] = deltaStart;
+    }
 }
 
 complex<double>** Calculation::Convert1DVectorTo2DArray(vector<complex<double>> const input, int sizeX, int sizeY) //TODO needs more testing
@@ -379,7 +442,7 @@ void Calculation::CalcLDOS()
     }
 
 
-    if(!pe)
+    if(!pe) //TODO
     {
         //Create PropertyExtractor. The parameter are in order: The
         //ChebyshevSolver, number of expansion coefficients used in the
@@ -396,15 +459,22 @@ void Calculation::CalcLDOS()
                     false,
                     false,
                     true,
-                    -SCALE_FACTOR,
-                    SCALE_FACTOR));
+                    -1,
+                    1));
     }
+
+    pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
+                    NUM_COEFFICIENTS,
+                    ENERGY_RESOLUTION,
+                    false,
+                    false,
+                    true,
+                    -1,
+                    1));
 
     //Extract local density of states and write to file
     Property::LDOS *ldos = pe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
-                        {SIZE_X, 1, 4});
-
-
+                        {SIZE_X, 1, 2});
 
     //Set filename and remove any file already in the folder
     FileWriter::setFileName(fileName);
