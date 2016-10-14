@@ -34,9 +34,12 @@ class Calculation
         static complex<double> FuncDelta(Index, Index);
         static vector<complex<double>> Convert2DArrayTo1DVector(complex<double>** const, int, int);
         static complex<double>** Convert1DVectorTo2DArray(vector<complex<double>> const, int, int);
-        static vector<double> getAbsVec(vector<complex<double>>);
-        static vector<double> getPhaseVec(vector<complex<double>>);
-        static void setBoundary(complex<double>**);
+        static vector<double> GetAbsVec(vector<complex<double>>);
+        static vector<double> GetPhaseVec(vector<complex<double>>);
+        static void SetBoundary(complex<double>**);
+        static double RelDiffDelta();
+        static void WriteDelta(int);
+        static void SwapDeltas();
 
 
 
@@ -64,7 +67,7 @@ class Calculation
         static bool modelSetUp;
 
         static int numberSCRuns;
-        static int epsDelta;
+        static double epsDelta;
         static bool verbose;
         static unique_ptr<ChebyshevSolver> cSolver;
         static unique_ptr<CPropertyExtractor> pe;

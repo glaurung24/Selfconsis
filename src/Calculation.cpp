@@ -39,7 +39,7 @@ complex<double>** Calculation::deltaOld;
 bool Calculation::checkInit = false;
 bool Calculation::modelSetUp = false;
 int Calculation::numberSCRuns;
-int Calculation::epsDelta;
+double Calculation::epsDelta;
 bool Calculation::verbose;
 
 unique_ptr<ChebyshevSolver> Calculation::cSolver;
@@ -51,7 +51,7 @@ string Calculation::fileName;
 void Calculation::Init()
 {
         checkInit = true;
-        N = 20;
+        N = 15;
         SIZE_X = 4*N;
         SIZE_Y = 2*N+1;
         SPIN_D = 4;
@@ -62,11 +62,11 @@ void Calculation::Init()
 
         deltaStart = 0.3;
         alpha = 0.3;
-        couplingPotential = 1;
+        couplingPotential = 5;
 
         InitDelta();
 
-        epsDelta = 0.05;
+        epsDelta = 0.02;
         numberSCRuns = 9;
 
         cSolver = nullptr;
@@ -246,11 +246,6 @@ complex<double> Calculation::FuncDelta(Index to, Index from)
 
 void Calculation::ScLoop(bool writeEachDelta)
 {
-//    #pragma omp parallel for
-//    complex<double> pairFunction = pe.calculateExpectationValue({x,y,3},{x,y,0});
-
-//    delta_new[x][y] = -interactionValueBCS*pairFunction;
-
     if(!checkInit  & !modelSetUp)
     {
         throw runtime_error("Calculation was not Initialised or model is not set up. Run Calculation::Init() and Calculation::SetUpModel() before running Calculation::ScLoop\n");
@@ -261,8 +256,6 @@ void Calculation::ScLoop(bool writeEachDelta)
         cSolver->setModel(&model);
         cSolver->setScaleFactor(SCALE_FACTOR);
     }
-
-
     if(!pe)
     {
         pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
@@ -280,65 +273,43 @@ void Calculation::ScLoop(bool writeEachDelta)
 
     if(writeEachDelta)
     {
-        stringstream loopFileNameAbs;
-        stringstream loopFileNameArg;
-        loopFileNameAbs << "DeltaLoop_" << loopCounter << ".h5";
-        vector<complex<double>> deltaOutput = Convert2DArrayTo1DVector(deltaNew, SIZE_X, SIZE_Y);
-        const int RANK = 2;
-        int dims[RANK] = {SIZE_X, SIZE_Y};
-        FileWriter::setFileName(loopFileNameAbs.str());
-        FileWriter::clear();
-        FileWriter::write(&getAbsVec(deltaOutput)[0], RANK, dims, "DeltaAbs");
-        FileWriter::write(&getPhaseVec(deltaOutput)[0], RANK, dims, "DeltaArg");
+        WriteDelta(loopCounter);
     }
 
-    complex<double>** deltaTmp;
     while(loopCounter < numberSCRuns)
     {
 
 
 
-        deltaTmp = deltaOld;
-        deltaOld = deltaNew;
-        deltaNew = deltaTmp;
-        double diffDelta = 0;
-        double diffDeltaMax = 0;
-        double deltaRel = 1;
+        SwapDeltas();
+
+
+        #pragma omp parallel for
         for(int x=0; x < SIZE_X; x++)
         {
             for(int y=0; y < SIZE_Y; y++)
             {
-                deltaNew[x][y] = pe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
-                diffDelta = abs(deltaNew[x][y]-deltaOld[x][y]);
-                if(diffDelta > diffDeltaMax)
-                {
-                    diffDeltaMax = diffDelta;
-                    deltaRel = diffDeltaMax/abs(deltaNew[x][y]);
-                }
+                deltaNew[x][y] = -pe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
+
             }
         }
-        setBoundary(deltaNew);
 
 
+//        setBoundary(deltaNew);
+
+        double deltaRel = RelDiffDelta();
         if(!verbose)
         {
             cout << "Loop number: " << loopCounter +1 << ", rel eps= " << deltaRel << endl;
         }
         if(writeEachDelta)
         {
-            stringstream loopFileNameAbs;
-            stringstream loopFileNameArg;
-            loopFileNameAbs << "DeltaLoop_" << loopCounter +1 << ".h5";
-            vector<complex<double>> deltaOutput = Convert2DArrayTo1DVector(deltaNew, SIZE_X, SIZE_Y);
-            const int RANK = 2;
-            int dims[RANK] = {SIZE_X, SIZE_Y};
-            FileWriter::setFileName(loopFileNameAbs.str());
-            FileWriter::clear();
-            FileWriter::write(&getAbsVec(deltaOutput)[0], RANK, dims, "DeltaAbs");
-            FileWriter::write(&getPhaseVec(deltaOutput)[0], RANK, dims, "DeltaArg");
+            WriteDelta(loopCounter);
         }
+
         if(deltaRel < epsDelta)
         {
+
             if(!verbose)
             {
                 cout << "End of SC loop after " << loopCounter + 1 <<
@@ -350,8 +321,38 @@ void Calculation::ScLoop(bool writeEachDelta)
     }
 }
 
+void Calculation::SwapDeltas()
+{
+        complex<double>** deltaTmp;
+        deltaTmp = deltaOld;
+        deltaOld = deltaNew;
+        deltaNew = deltaTmp;
+}
 
-vector<double> Calculation::getAbsVec(vector<complex<double>> input)
+void Calculation::WriteDelta(int loopNr)
+{
+    stringstream loopFileNameAbs;
+//    stringstream loopFileNameArg;
+    if(loopNr < 0)
+    {
+        loopFileNameAbs << "DeltaLoop.h5";
+    }
+    else
+    {
+        loopFileNameAbs << "DeltaLoop_" << loopNr +1 << ".h5";
+    }
+
+    vector<complex<double>> deltaOutput = Convert2DArrayTo1DVector(deltaNew, SIZE_X, SIZE_Y);
+    const int RANK = 2;
+    int dims[RANK] = {SIZE_X, SIZE_Y};
+    FileWriter::setFileName(loopFileNameAbs.str());
+    FileWriter::clear();
+    FileWriter::write(&GetAbsVec(deltaOutput)[0], RANK, dims, "DeltaAbs");
+    FileWriter::write(&GetPhaseVec(deltaOutput)[0], RANK, dims, "DeltaArg");
+}
+
+
+vector<double> Calculation::GetAbsVec(vector<complex<double>> input)
 {
     vector<double> output;
     for(unsigned int i=0; i < input.size(); i++)
@@ -361,7 +362,27 @@ vector<double> Calculation::getAbsVec(vector<complex<double>> input)
     return output;
 }
 
-vector<double> Calculation::getPhaseVec(vector<complex<double>> input)
+
+double Calculation::RelDiffDelta()
+{
+    double diffDelta = 0;
+    double diffDeltaMax = 0;
+    double deltaRel = 1;
+    for(int x=0; x < SIZE_X; x++)
+    {
+        for(int y=0; y < SIZE_Y; y++)
+        {
+            diffDelta = abs(deltaNew[x][y]-deltaOld[x][y]);
+            if(diffDelta > diffDeltaMax)
+            {
+                diffDeltaMax = diffDelta;
+                deltaRel = diffDeltaMax/abs(deltaOld[x][y]);
+            }
+        }
+    }
+    return deltaRel;
+}
+vector<double> Calculation::GetPhaseVec(vector<complex<double>> input)
 {
     vector<double> output;
     for(unsigned int i=0; i < input.size(); i++)
@@ -384,7 +405,7 @@ vector<complex<double>> Calculation::Convert2DArrayTo1DVector(complex<double>** 
     return out;
 }
 
-void Calculation::setBoundary(complex<double>** input)
+void Calculation::SetBoundary(complex<double>** input)
 {
     //Upper y boundary
     for(int i=0; i < SIZE_X; i++)
