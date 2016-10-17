@@ -33,7 +33,7 @@ class Calculation
 
         static void InitDelta();
         static complex<double> FuncDelta(Index, Index);
-        static vector<complex<double>> ConvertMatrixToVector(Matrix<complex<double>> const);
+        static vector<complex<double>> ConvertMatrixToVector(const Matrix<complex<double>>&);
 //        static complex<double>** Convert1DVectorTo2DArray(vector<complex<double>> const, int, int);
         static vector<double> GetAbsVec(vector<complex<double>>);
         static vector<double> GetPhaseVec(vector<complex<double>>);

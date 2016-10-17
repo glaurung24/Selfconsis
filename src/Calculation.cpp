@@ -84,18 +84,19 @@ void Calculation::InitDelta()
     deltaNew.reserve(SIZE_X);
     deltaOld.reserve(SIZE_X);
 
-    vector<vector<complex<double>>>::iterator itX;
-    for(unsigned int i =0; i < deltaNew.size(); i++)
-//    for(itX= deltaNew.begin(); itX < deltaNew.end(); itX++)
-    {
 
-        deltaNew[i].reserve(SIZE_Y);
-        deltaOld[i].reserve(SIZE_Y);
-        for(unsigned int j=0; j < deltaNew[i].size(); j++)
-        {
-            deltaNew[i].push_back(deltaStart);
-            deltaOld[i].push_back(deltaStart);
-        }
+    for(int i =0; i < SIZE_X; i++)
+    {
+        vector<complex<double>> row(SIZE_Y, deltaStart);
+        deltaNew.push_back( row );
+        deltaOld.push_back( row );
+//        deltaNew[i].reserve();
+//        deltaOld[i].reserve(SIZE_Y);
+//        for(unsigned int j=0; j < deltaNew[i].size(); j++)
+//        {
+//            deltaNew[i].push_back(deltaStart); //TODO mabye faster way?
+//            deltaOld[i].push_back(deltaStart);
+//        }
     }
 }
 
@@ -326,10 +327,10 @@ void Calculation::ScLoop(bool writeEachDelta)
 
 void Calculation::SwapDeltas()
 {
-        Matrix<complex<double>>* deltaTmp;
-        deltaTmp = &deltaOld;
+        Matrix<complex<double>> deltaTmp;
+        deltaTmp = deltaOld;
         deltaOld = deltaNew;
-        deltaNew = *deltaTmp;
+        deltaNew = deltaTmp;
 }
 
 void Calculation::WriteDelta(int loopNr)
@@ -346,6 +347,8 @@ void Calculation::WriteDelta(int loopNr)
     }
 
     vector<complex<double>> deltaOutput = ConvertMatrixToVector(deltaNew);
+
+
     const int RANK = 2;
     int dims[RANK] = {SIZE_X, SIZE_Y};
     FileWriter::setFileName(loopFileNameAbs.str());
@@ -358,6 +361,7 @@ void Calculation::WriteDelta(int loopNr)
 vector<double> Calculation::GetAbsVec(vector<complex<double>> input)
 {
     vector<double> output;
+    output.reserve(input.size());
     for(unsigned int i=0; i < input.size(); i++)
     {
         output.push_back(abs(input[i]));
@@ -395,10 +399,9 @@ vector<double> Calculation::GetPhaseVec(vector<complex<double>> input)
     return output;
 }
 
-vector<complex<double>> Calculation::ConvertMatrixToVector(Matrix<complex<double>> input)
+vector<complex<double>> Calculation::ConvertMatrixToVector(const Matrix<complex<double>>& input)
 {
     vector<complex<double>> out;
-
     for(unsigned int i=0; i < input.size(); i++)
     {
         for(unsigned int j=0; j < input[i].size(); j++)
