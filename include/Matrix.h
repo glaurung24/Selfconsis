@@ -1,10 +1,12 @@
 #ifndef MATRIX_H_INCLUDED
 #define MATRIX_H_INCLUDED
 
-#include <array>
+#include <vector>
 
-template <class T, size_t ROW, size_t COL>
-using Matrix = std::array<std::array<T, COL>, ROW>;
-Matrix<float, 3, 4> mat;
+//template <class T, size_t ROW, size_t COL>
+//using Matrix = std::vector<std::vector<T, COL>, ROW>;
+
+template <class T>
+using Matrix = std::vector<std::vector<T>>;
 
 #endif // MATRIX_H_INCLUDED

@@ -34,8 +34,8 @@ Model Calculation::model;
 int Calculation::NUM_COEFFICIENTS;
 int Calculation::ENERGY_RESOLUTION;
 double Calculation::SCALE_FACTOR;
-complex<double>** Calculation::deltaNew;
-complex<double>** Calculation::deltaOld;
+Matrix<complex<double>>  Calculation::deltaNew;
+Matrix<complex<double>> Calculation::deltaOld;
 bool Calculation::checkInit = false;
 bool Calculation::modelSetUp = false;
 int Calculation::numberSCRuns;
@@ -51,7 +51,7 @@ string Calculation::fileName;
 void Calculation::Init()
 {
         checkInit = true;
-        N = 15;
+        N = 1;
         SIZE_X = 4*N;
         SIZE_Y = 2*N+1;
         SPIN_D = 4;
@@ -81,30 +81,33 @@ void Calculation::Init()
 
 void Calculation::InitDelta()
 {
-    deltaNew = new complex<double>*[SIZE_X];
-    deltaOld = new complex<double>*[SIZE_X];
+    deltaNew.reserve(SIZE_X);
+    deltaOld.reserve(SIZE_X);
 
-    for(int i=0; i < SIZE_X; i++)
+    vector<vector<complex<double>>>::iterator itX;
+    for(unsigned int i =0; i < deltaNew.size(); i++)
+//    for(itX= deltaNew.begin(); itX < deltaNew.end(); itX++)
     {
-        deltaNew[i] = new complex<double>[SIZE_Y];
-        deltaOld[i] = new complex<double>[SIZE_Y];
-        for(int j=0; j < SIZE_Y; j++)
+
+        deltaNew[i].reserve(SIZE_Y);
+        deltaOld[i].reserve(SIZE_Y);
+        for(unsigned int j=0; j < deltaNew[i].size(); j++)
         {
-            deltaNew[i][j] = deltaStart;
-            deltaOld[i][j] = deltaStart;
+            deltaNew[i].push_back(deltaStart);
+            deltaOld[i].push_back(deltaStart);
         }
     }
 }
 
 void Calculation::Delete() //TODO seg fault!!!
 {
-    for(int i=0; i < SIZE_Y; i++)
-    {
-        delete deltaNew[i];
-        delete deltaOld[i];
-    }
-    delete deltaNew;
-    delete deltaOld;
+//    for(int i=0; i < SIZE_Y; i++)
+//    {
+//        delete deltaNew[i];
+//        delete deltaOld[i];
+//    }
+//    delete deltaNew;
+//    delete deltaOld;
 }
 
 
@@ -323,10 +326,10 @@ void Calculation::ScLoop(bool writeEachDelta)
 
 void Calculation::SwapDeltas()
 {
-        complex<double>** deltaTmp;
-        deltaTmp = deltaOld;
+        Matrix<complex<double>>* deltaTmp;
+        deltaTmp = &deltaOld;
         deltaOld = deltaNew;
-        deltaNew = deltaTmp;
+        deltaNew = *deltaTmp;
 }
 
 void Calculation::WriteDelta(int loopNr)
@@ -342,7 +345,7 @@ void Calculation::WriteDelta(int loopNr)
         loopFileNameAbs << "DeltaLoop_" << loopNr +1 << ".h5";
     }
 
-    vector<complex<double>> deltaOutput = Convert2DArrayTo1DVector(deltaNew, SIZE_X, SIZE_Y);
+    vector<complex<double>> deltaOutput = ConvertMatrixToVector(deltaNew);
     const int RANK = 2;
     int dims[RANK] = {SIZE_X, SIZE_Y};
     FileWriter::setFileName(loopFileNameAbs.str());
@@ -392,12 +395,13 @@ vector<double> Calculation::GetPhaseVec(vector<complex<double>> input)
     return output;
 }
 
-vector<complex<double>> Calculation::Convert2DArrayTo1DVector(complex<double>** const input, int sizeX, int sizeY)
+vector<complex<double>> Calculation::ConvertMatrixToVector(Matrix<complex<double>> input)
 {
     vector<complex<double>> out;
-    for(int i=0; i < sizeX; i++)
+
+    for(unsigned int i=0; i < input.size(); i++)
     {
-        for(int j=0; j < sizeY; j++)
+        for(unsigned int j=0; j < input[i].size(); j++)
         {
             out.push_back(input[i][j]);
         }
@@ -432,21 +436,20 @@ void Calculation::SetBoundary(complex<double>** input)
     }
 }
 
-complex<double>** Calculation::Convert1DVectorTo2DArray(vector<complex<double>> const input, int sizeX, int sizeY) //TODO needs more testing
-{
-    complex<double>** out;
-    out = new complex<double>*[sizeX];
-
-    for(int i=0; i < sizeX; i++)
-    {
-        out[i] = new complex<double>[sizeY];
-        for(int j=0; j < sizeY; j++)
-        {
-            out[i][j] = input[j+i*sizeY];
-        }
-    }
-    return out;
-}
+//complex<double>** Calculation::Convert1DVectorTo2DArray(vector<complex<double>> const input, int sizeX, int sizeY) //TODO outdated
+//    complex<double>** out;
+//    out = new complex<double>*[sizeX];
+//
+//    for(int i=0; i < sizeX; i++)
+//    {
+//        out[i] = new complex<double>[sizeY];
+//        for(int j=0; j < sizeY; j++)
+//        {
+//            out[i][j] = input[j+i*sizeY];
+//        }
+//    }
+//    return out;
+//}
 
 
 void Calculation::CalcLDOS()

@@ -6,6 +6,7 @@
 #include "Model.h"
 #include "ChebyshevSolver.h"
 #include "CPropertyExtractor.h"
+#include "Matrix.h"
 
 using namespace std;
 using namespace TBTK;
@@ -32,8 +33,8 @@ class Calculation
 
         static void InitDelta();
         static complex<double> FuncDelta(Index, Index);
-        static vector<complex<double>> Convert2DArrayTo1DVector(complex<double>** const, int, int);
-        static complex<double>** Convert1DVectorTo2DArray(vector<complex<double>> const, int, int);
+        static vector<complex<double>> ConvertMatrixToVector(Matrix<complex<double>> const);
+//        static complex<double>** Convert1DVectorTo2DArray(vector<complex<double>> const, int, int);
         static vector<double> GetAbsVec(vector<complex<double>>);
         static vector<double> GetPhaseVec(vector<complex<double>>);
         static void SetBoundary(complex<double>**);
@@ -61,8 +62,8 @@ class Calculation
         static int NUM_COEFFICIENTS;
         static int ENERGY_RESOLUTION;
         static double SCALE_FACTOR;
-        static complex<double>** deltaNew;
-        static complex<double>** deltaOld;
+        static Matrix<complex<double>> deltaNew;
+        static Matrix<complex<double>>  deltaOld;
         static bool checkInit;
         static bool modelSetUp;
 
