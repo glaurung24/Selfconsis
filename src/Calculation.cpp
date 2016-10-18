@@ -28,6 +28,8 @@ complex<double> Calculation::z; //Zeeman coupling
 complex<double> Calculation::deltaStart;
 complex<double> Calculation::alpha;
 complex<double> Calculation::couplingPotential;
+Matrix<bool> Calculation::isMagnetized;
+bool Calculation::periodicBoundCond;
 
 Model Calculation::model;
 
@@ -41,6 +43,7 @@ bool Calculation::modelSetUp = false;
 int Calculation::numberSCRuns;
 double Calculation::epsDelta;
 bool Calculation::verbose;
+bool Calculation::useGPU;
 
 unique_ptr<ChebyshevSolver> Calculation::cSolver;
 unique_ptr<CPropertyExtractor> Calculation::pe;
@@ -51,7 +54,7 @@ string Calculation::fileName;
 void Calculation::Init()
 {
         checkInit = true;
-        N = 1;
+        N = 4;
         SIZE_X = 4*N;
         SIZE_Y = 2*N+1;
         SPIN_D = 4;
@@ -63,20 +66,24 @@ void Calculation::Init()
         deltaStart = 0.3;
         alpha = 0.3;
         couplingPotential = 5;
+        periodicBoundCond = true;
 
         InitDelta();
+        InitIsMagnetized();
 
-        epsDelta = 0.02;
-        numberSCRuns = 9;
+        epsDelta = 0.05;
+        numberSCRuns = 10;
 
         cSolver = nullptr;
         pe = nullptr;
 
-        NUM_COEFFICIENTS = 2000;
-        ENERGY_RESOLUTION = 4000;
+        NUM_COEFFICIENTS = 1000;
+        ENERGY_RESOLUTION = 2000;
         SCALE_FACTOR = 10.;
 
         fileName = "TBTKResults.h5";
+        useGPU = false;
+
 }
 
 void Calculation::InitDelta()
@@ -99,6 +106,24 @@ void Calculation::InitDelta()
 //        }
     }
 }
+
+
+void Calculation::InitIsMagnetized()
+{
+    isMagnetized.reserve(SIZE_X);
+
+
+    for(int i =0; i < SIZE_X; i++)
+    {
+        vector<bool> row(SIZE_Y, false);
+        isMagnetized.push_back( row );
+    }
+
+    for(int x = SIZE_X/4; x < 3*SIZE_X/4; x++){
+        isMagnetized[x][SIZE_Y/2]=true;
+    }
+}
+
 
 void Calculation::Delete() //TODO seg fault!!!
 {
@@ -145,14 +170,6 @@ void Calculation::SetUpModel()
     {
         throw runtime_error("Calculation was not Initialised. Run Calculation::Init() before setting up Model\n");
     }
-    bool isMagnetized[SIZE_X][SIZE_Y];
-
-
-
-    for(int x = SIZE_X/4; x < 3*SIZE_X/4; x++){
-        isMagnetized[x][SIZE_Y/2]=true;
-    }
-
     //Create model and set up hopping parameters
 
     for(int x = 0; x < SIZE_X; x++){
@@ -172,12 +189,12 @@ void Calculation::SetUpModel()
 
 //------------------------Nearest neighbour hopping term--------------------------------------
                 //Add hopping parameters corresponding to t
-                if(x+1 < SIZE_X){
+                if(periodicBoundCond || x+1 < SIZE_X){
                     model.addHAAndHC(HoppingAmplitude(-t,	{(x+1)%SIZE_X, y, s},	{x, y, s}));
                     model.addHAAndHC(HoppingAmplitude(t,	{x, y, s+2},{(x+1)%SIZE_X, y, s+2}));
 //					model.addHAAndHC(HoppingAmplitude(t, {(x+1)%SIZE_X, y, s+2}, {x, y, s+2})); //same results with this line as with the line above
                 }
-                if(y+1 < SIZE_Y){
+                if(periodicBoundCond || y+1 < SIZE_Y){
                     model.addHAAndHC(HoppingAmplitude(-t,	{x, (y+1)%SIZE_Y, s},	{x, y, s}));
                     model.addHAAndHC(HoppingAmplitude(t,  {x, y, s+2}, {x, (y+1)%SIZE_Y, s+2}));
 //					model.addHAAndHC(HoppingAmplitude(t,   {x, (y+1)%SIZE_Y, s+2},{x, y, s+2}));
@@ -185,14 +202,14 @@ void Calculation::SetUpModel()
 
 //------------------------Rashba hopping term--------------------------------------
 
-                if(x+1 < SIZE_X){
+                if(periodicBoundCond || x+1 < SIZE_X){
     //                    model.addHAAndHC(HoppingAmplitude(alpha*2.0*(0.5-s), {(x+1)%SIZE_X, y, s*2},	{x, y, s*2+1}));
     //                    model.addHAAndHC(HoppingAmplitude(-alpha*2.0*(0.5-s), {x, y, s*2},	{(x+1)%SIZE_X, y, s*2+1}));
                     model.addHAAndHC(HoppingAmplitude(alpha *2.0*(0.5-s), {(x+1)%SIZE_X,y,(s+1)%2}, {x,y,s}));
                     model.addHAAndHC(HoppingAmplitude(-alpha *2.0*(0.5-s), {x,y,s+2}, {(x+1)%SIZE_X,y,(s+1)%2+2}));
                 }
 
-                if(y+1 < SIZE_Y){
+                if(periodicBoundCond || y+1 < SIZE_Y){
     //                    model.addHAAndHC(HoppingAmplitude(i*alpha*2.0*(0.5-s),	{x, (y+1)%SIZE_Y, s*2},	{x, y, s*2+1}));
     //                    model.addHAAndHC(HoppingAmplitude(-i*alpha*2.0*(0.5-s),  {x, y, s*2}, {x, (y+1)%SIZE_Y, s*2+1}));
                     model.addHAAndHC(HoppingAmplitude(i*alpha, {x,(y+1)%SIZE_Y,(s+1)%2}, {x,y,s}));
@@ -215,6 +232,10 @@ void Calculation::SetUpModel()
 
     //Construct model
     model.construct();
+    if(useGPU)
+    {
+        model.constructCOO();
+    }
 }
 
 
@@ -265,7 +286,7 @@ void Calculation::ScLoop(bool writeEachDelta)
         pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
                     NUM_COEFFICIENTS,
                     ENERGY_RESOLUTION,
-                    false,
+                    useGPU,
                     false,
                     true,
                     -SCALE_FACTOR,
@@ -308,7 +329,7 @@ void Calculation::ScLoop(bool writeEachDelta)
         }
         if(writeEachDelta)
         {
-            WriteDelta(loopCounter);
+            WriteDelta(loopCounter + 1);
         }
 
         if(deltaRel < epsDelta)
@@ -343,7 +364,14 @@ void Calculation::WriteDelta(int loopNr)
     }
     else
     {
-        loopFileNameAbs << "DeltaLoop_" << loopNr +1 << ".h5";
+        if(loopNr < 10)
+        {
+            loopFileNameAbs << "DeltaLoop_0" << loopNr << ".h5";
+        }
+        else
+        {
+            loopFileNameAbs << "DeltaLoop_" << loopNr << ".h5";
+        }
     }
 
     vector<complex<double>> deltaOutput = ConvertMatrixToVector(deltaNew);
@@ -469,31 +497,31 @@ void Calculation::CalcLDOS()
     }
 
 
-    if(!pe) //TODO
-    {
-        //Create PropertyExtractor. The parameter are in order: The
-        //ChebyshevSolver, number of expansion coefficients used in the
-        //Cebyshev expansion, energy resolution with which the Green's function
-        // is evaluated, whether calculate expansion functions using a GPU or
-        //not, whether to evaluate the Green's function using a GPU or not,
-        //whether to use a lookup table for the Green's function or not
-        //(required if the Green's function is evaluated on a GPU), and the
-        //lower and upper bound between which the Green's function is evaluated
-        //(has to be inside the interval [-SCALE_FACTOR, SCALE_FACTOR]).
-        pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
-                    NUM_COEFFICIENTS,
-                    ENERGY_RESOLUTION,
-                    false,
-                    false,
-                    true,
-                    -1,
-                    1));
-    }
+//    if(!pe) //TODO
+//    {
+//        //Create PropertyExtractor. The parameter are in order: The
+//        //ChebyshevSolver, number of expansion coefficients used in the
+//        //Cebyshev expansion, energy resolution with which the Green's function
+//        // is evaluated, whether calculate expansion functions using a GPU or
+//        //not, whether to evaluate the Green's function using a GPU or not,
+//        //whether to use a lookup table for the Green's function or not
+//        //(required if the Green's function is evaluated on a GPU), and the
+//        //lower and upper bound between which the Green's function is evaluated
+//        //(has to be inside the interval [-SCALE_FACTOR, SCALE_FACTOR]).
+//        pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
+//                    NUM_COEFFICIENTS,
+//                    ENERGY_RESOLUTION,
+//                    useGPU,
+//                    false,
+//                    true,
+//                    -1,
+//                    1));
+//    }
 
     pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
                     NUM_COEFFICIENTS,
                     ENERGY_RESOLUTION,
-                    false,
+                    useGPU,
                     false,
                     true,
                     -1,
@@ -508,4 +536,9 @@ void Calculation::CalcLDOS()
     FileWriter::clear();
     FileWriter::writeLDOS(ldos);
     delete ldos;
+}
+
+void Calculation::SetZeemanPot(complex<double> newZeemanPot)
+{
+    z = newZeemanPot;
 }

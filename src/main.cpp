@@ -40,31 +40,7 @@ int main(int argc, char **argv){
     Calculation::SetUpModel();
     Calculation::ScLoop(true);
     Calculation::CalcLDOS();
-//    Calculation::Delete(); //TODO uncomment
 
-    //Spin index:
-    // 0: particle up
-    // 1: particle down
-    // 2: Hole up
-    // 3: Hole down
-
-
-
-    //Model parameters.
-//        Util::Timer::tick("setUpModel");
-
-
-
-
-//        Util::Timer::tock();
-
-    //TODO ask about fermi statistic
-//        Util::Timer::tick("Calculation");
-    //Chebyshev expansion parameters.
-
-
-
-//        Util::Timer::tock();
 	return 0;
 }
 

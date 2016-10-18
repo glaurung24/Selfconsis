@@ -23,6 +23,7 @@ class Calculation
         static void ScLoop(bool writeEachDelta = false);
         static void Delete();
         static void CalcLDOS();
+        static void SetZeemanPot(complex<double>);
 
 
     protected:
@@ -41,6 +42,7 @@ class Calculation
         static double RelDiffDelta();
         static void WriteDelta(int);
         static void SwapDeltas();
+        static void InitIsMagnetized();
 
 
 
@@ -56,6 +58,8 @@ class Calculation
         static complex<double> deltaStart;
         static complex<double> alpha;
         static complex<double> couplingPotential;
+        static Matrix<bool> isMagnetized;
+        static bool periodicBoundCond;
 
         static Model model;
 
@@ -73,6 +77,7 @@ class Calculation
         static unique_ptr<ChebyshevSolver> cSolver;
         static unique_ptr<CPropertyExtractor> pe;
         static string fileName;
+        static bool useGPU;
 };
 
 #endif // CALCULATION_H
