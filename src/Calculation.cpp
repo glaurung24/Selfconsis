@@ -54,25 +54,25 @@ string Calculation::fileName;
 void Calculation::Init()
 {
         checkInit = true;
-        N = 4;
+        N = 2;
         SIZE_X = 4*N;
         SIZE_Y = 2*N+1;
         SPIN_D = 4;
 
         mu = -4.0;
         t = 1.0;
-        z = 0.5; //Zeeman coupling
+        z = 0.5; //Zeeman coupling 0.5
 
         deltaStart = 0.3;
         alpha = 0.3;
         couplingPotential = 5;
-        periodicBoundCond = true;
+        periodicBoundCond = false;
 
         InitDelta();
         InitIsMagnetized();
 
         epsDelta = 0.05;
-        numberSCRuns = 10;
+        numberSCRuns = 2;
 
         cSolver = nullptr;
         pe = nullptr;
@@ -83,7 +83,6 @@ void Calculation::Init()
 
         fileName = "TBTKResults.h5";
         useGPU = false;
-
 }
 
 void Calculation::InitDelta()
@@ -125,7 +124,7 @@ void Calculation::InitIsMagnetized()
 }
 
 
-void Calculation::Delete() //TODO seg fault!!!
+void Calculation::Delete()
 {
 //    for(int i=0; i < SIZE_Y; i++)
 //    {
@@ -141,19 +140,38 @@ void Calculation::Init(std::string input_file) //TODO
 {
 
     Util::ParameterSet* ps = FileParser::readParameterSet("input");
+     //Zeeman coupling
 //    counter_z = ps->getInt("counter_z");
-    N = 20;
+    checkInit = true;
+    N = ps->getInt("SizeN");
     SIZE_X = 4*N;
     SIZE_Y = 2*N+1;
     SPIN_D = 4;
 
-    mu = -4.0;
-    t = 1.0;
-    z = ps->getComplex("z"); //Zeeman coupling
-    deltaStart = 0.3;
-    alpha=0.3;
+    mu = ps->getComplex("ChemPot");
+    t = ps->getComplex("HoppingPot");
+    z = ps->getComplex("ZeemanPot"); //Zeeman coupling 0.5
+
+    deltaStart = ps->getComplex("DeltaStart");
+    alpha = ps->getComplex("RashbaCoupling");
+    couplingPotential = ps->getComplex("CouplingPot");
+    periodicBoundCond = ps->getInt("PeriodicBound");
 
     InitDelta();
+    InitIsMagnetized();
+
+    epsDelta = ps->getDouble("EpsDelta");
+    numberSCRuns = ps->getInt("MaxNrSCRuns");
+
+    cSolver = nullptr;
+    pe = nullptr;
+
+    NUM_COEFFICIENTS = ps->getInt("NumChebCoef");
+    ENERGY_RESOLUTION = ps->getInt("EnergyRes");
+    SCALE_FACTOR = ps->getDouble("ScaleFactor");
+
+    fileName = "TBTKResults.h5";
+    useGPU = ps->getInt("PeriodicBound");
 }
 
 
