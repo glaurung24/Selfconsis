@@ -171,7 +171,7 @@ void Calculation::Init(std::string input_file) //TODO
     SCALE_FACTOR = ps->getDouble("ScaleFactor");
 
     fileName = "TBTKResults.h5";
-    useGPU = ps->getInt("PeriodicBound");
+    useGPU = ps->getInt("UseGPU");
 }
 
 

@@ -36,7 +36,7 @@ void scLoop();
 
 int main(int argc, char **argv){
 	//Lattice size
-    Calculation::Init();
+    Calculation::Init("input");
     Calculation::SetUpModel();
     Calculation::ScLoop(true);
     Calculation::CalcLDOS();

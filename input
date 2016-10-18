@@ -11,5 +11,5 @@ int		MaxNrSCRuns	= 30
 int		NumChebCoef	= 5000
 int		EnergyRes	= 10000
 double		ScaleFactor	= 10.0
-int		UseGPU		= 0 
+int		UseGPU		= 0
 int		counter_z	= 0
