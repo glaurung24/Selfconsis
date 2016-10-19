@@ -325,6 +325,10 @@ void Calculation::ScLoop(bool writeEachDelta)
 
 
         SwapDeltas();
+        if(useGPU)
+        {
+            model.reconstructCOO();
+        }
 
 
         #pragma omp parallel for
