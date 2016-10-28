@@ -19,6 +19,7 @@ class Calculation
     public:
         static void Init();
         static void Init(string);
+        static void InitRestart(string);
         static void SetUpModel();
         static void ScLoop(bool writeEachDelta = false);
         static void Delete();

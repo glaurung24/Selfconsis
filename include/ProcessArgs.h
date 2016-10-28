@@ -11,17 +11,18 @@ class ProcessArgs
         ProcessArgs(int argc, char **argv);
         virtual ~ProcessArgs();
         std::string getInputFilePath() const;
+        std::string getOutputFilePath() const;
+        bool getRestart() const;
     protected:
     private:
         static const int EXPECT_INPUT_FILE_PATH;
+        static const int EXPECT_OUTPUT_FILE_PATH;
         static const std::string FLAG_RESTART;
         static const std::string FLAG_INPUT_FILE_PATH;
+        static const std::string FLAG_OUTPUT_FILE_PATH;
         bool restart = false;
         std::string inputFilePath = "input";
-
-
-        std::vector<std::tuple<std::string, bool>> flags;
-
+        std::string outputFilePath = "TBTKResults.h5";
 };
 
 #endif // PROCESSARGS_H

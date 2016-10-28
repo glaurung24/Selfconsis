@@ -39,7 +39,8 @@ int main(int argc, char **argv){
     logFile << "\n\n###" << put_time(localtime(&t), "%d-%m-%Y_%H-%M-%S") << "\n\n";
     Util::Streams::log.rdbuf(logFile.rdbuf());
 
-    ProcessArgs Args(argc, argv);
+    ProcessArgs args(argc, argv);
+
     Calculation::Init("input");
     Calculation::SetUpModel();
     Calculation::ScLoop(true);

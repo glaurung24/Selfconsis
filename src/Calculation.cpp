@@ -45,6 +45,7 @@ int Calculation::numberSCRuns;
 double Calculation::epsDelta;
 bool Calculation::verbose;
 bool Calculation::useGPU;
+int Calculation::sCLoopCounter = 0;
 
 unique_ptr<ChebyshevSolver> Calculation::cSolver;
 unique_ptr<CPropertyExtractor> Calculation::pe;
@@ -81,6 +82,7 @@ void Calculation::Init()
     NUM_COEFFICIENTS = 1000;
     ENERGY_RESOLUTION = 2000;
     SCALE_FACTOR = 10.;
+    sCLoopCounter = 0;
 
     fileName = "TBTKResults.h5";
     useGPU = false;
@@ -146,9 +148,51 @@ void Calculation::Delete()
 void Calculation::Init(std::string input_file) //TODO
 {
 
-    Util::ParameterSet* ps = FileParser::readParameterSet("input"); //TODO check that pointer (who is destructing it?
+    unique_ptr<Util::ParameterSet> ps = unique_ptr<Util::ParameterSet>(FileParser::readParameterSet(input_file));
      //Zeeman coupling
 //    counter_z = ps->getInt("counter_z");
+    checkInit = true;
+    N = ps->getInt("SizeN");
+    SIZE_X = 4*N;
+    SIZE_Y = 2*N+1;
+    SPIN_D = 4;
+
+    mu = ps->getComplex("ChemPot");
+    t = ps->getComplex("HoppingPot");
+    z = ps->getComplex("ZeemanPot"); //Zeeman coupling 0.5
+
+    deltaStart = ps->getComplex("DeltaStart");
+    alpha = ps->getComplex("RashbaCoupling");
+    couplingPotential = ps->getComplex("CouplingPot");
+    periodicBoundCond = ps->getBool("PeriodicBound");
+
+    InitDelta();
+    InitIsMagnetized();
+
+    epsDelta = ps->getDouble("EpsDelta");
+    numberSCRuns = ps->getInt("MaxNrSCRuns");
+
+    cSolver = nullptr;
+    pe = nullptr;
+
+    NUM_COEFFICIENTS = ps->getInt("NumChebCoef");
+    ENERGY_RESOLUTION = ps->getInt("EnergyRes");
+    SCALE_FACTOR = ps->getDouble("ScaleFactor");
+    sCLoopCounter = 0;
+
+    fileName = ps->getString("OutputFilePath");
+    useGPU = ps->getBool("UseGPU");
+
+
+    FileWriter::setFileName(fileName);
+    FileWriter::clear();
+    FileWriter::writeParameterSet(ps.get());
+}
+
+void Calculation::InitRestart(string output_file)
+{
+
+    unique_ptr<Util::ParameterSet> ps = unique_ptr<Util::ParameterSet>(FileReader::readParameterSet(output_file));
     checkInit = true;
     N = ps->getInt("SizeN");
     SIZE_X = 4*N;
@@ -180,12 +224,10 @@ void Calculation::Init(std::string input_file) //TODO
     fileName = ps->getString("OutputFilePath");
     useGPU = ps->getBool("UseGPU");
 
+    //TODO do some more stuff here
 
     FileWriter::setFileName(fileName);
-    FileWriter::clear();
-    FileWriter::writeParameterSet(ps);
 }
-
 
 
 
@@ -326,14 +368,14 @@ void Calculation::ScLoop(bool writeEachDelta)
     }
 
 
-    int loopCounter = 0;
+
 
     if(writeEachDelta)
     {
-        WriteDelta(loopCounter);
+        WriteDelta(sCLoopCounter);
     }
 
-    while(loopCounter < numberSCRuns)
+    while(sCLoopCounter < numberSCRuns)
     {
 
 
@@ -361,11 +403,11 @@ void Calculation::ScLoop(bool writeEachDelta)
         double deltaRel = RelDiffDelta();
         if(!verbose)
         {
-            cout << "Loop number: " << loopCounter +1 << ", rel eps= " << deltaRel << endl;
+            cout << "Loop number: " << sCLoopCounter +1 << ", rel eps= " << deltaRel << endl;
         }
         if(writeEachDelta)
         {
-            WriteDelta(loopCounter + 1);
+            WriteDelta(sCLoopCounter + 1);
         }
 
         if(deltaRel < epsDelta)
@@ -373,12 +415,12 @@ void Calculation::ScLoop(bool writeEachDelta)
 
             if(!verbose)
             {
-                cout << "End of SC loop after " << loopCounter + 1 <<
+                cout << "End of SC loop after " << sCLoopCounter + 1 <<
                 " iterations, reltive delta Delta: " << deltaRel << endl;
             }
             break;
         }
-        loopCounter++;
+        sCLoopCounter++;
     }
 }
 
