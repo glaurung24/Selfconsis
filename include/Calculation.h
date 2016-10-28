@@ -54,7 +54,6 @@ class Calculation
         static complex<double> mu;
         static complex<double> t;
         static complex<double> z; //Zeeman coupling
-        static complex<double>*** delta;
         static complex<double> deltaStart;
         static complex<double> alpha;
         static complex<double> couplingPotential;

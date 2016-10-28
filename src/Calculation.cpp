@@ -11,6 +11,7 @@
 #include <sstream>
 #include "ParameterSet.h"
 #include "FileParser.h"
+#include "FileReader.h"
 
 
 using namespace std;
@@ -53,36 +54,41 @@ string Calculation::fileName;
 
 void Calculation::Init()
 {
-        checkInit = true;
-        N = 2;
-        SIZE_X = 4*N;
-        SIZE_Y = 2*N+1;
-        SPIN_D = 4;
+    checkInit = true;
+    N = 2;
+    SIZE_X = 4*N;
+    SIZE_Y = 2*N+1;
+    SPIN_D = 4;
 
-        mu = -4.0;
-        t = 1.0;
-        z = 0.5; //Zeeman coupling 0.5
+    mu = -4.0;
+    t = 1.0;
+    z = 0.5; //Zeeman coupling 0.5
 
-        deltaStart = 0.3;
-        alpha = 0.3;
-        couplingPotential = 5;
-        periodicBoundCond = false;
+    deltaStart = 0.3;
+    alpha = 0.3;
+    couplingPotential = 5;
+    periodicBoundCond = false;
 
-        InitDelta();
-        InitIsMagnetized();
+    InitDelta();
+    InitIsMagnetized();
 
-        epsDelta = 0.05;
-        numberSCRuns = 2;
+    epsDelta = 0.05;
+    numberSCRuns = 2;
 
-        cSolver = nullptr;
-        pe = nullptr;
+    cSolver = nullptr;
+    pe = nullptr;
 
-        NUM_COEFFICIENTS = 1000;
-        ENERGY_RESOLUTION = 2000;
-        SCALE_FACTOR = 10.;
+    NUM_COEFFICIENTS = 1000;
+    ENERGY_RESOLUTION = 2000;
+    SCALE_FACTOR = 10.;
 
-        fileName = "TBTKResults.h5";
-        useGPU = false;
+    fileName = "TBTKResults.h5";
+    useGPU = false;
+
+
+    FileWriter::setFileName(fileName);
+    FileWriter::clear();
+
 }
 
 void Calculation::InitDelta()
@@ -136,10 +142,11 @@ void Calculation::Delete()
 }
 
 
+
 void Calculation::Init(std::string input_file) //TODO
 {
 
-    Util::ParameterSet* ps = FileParser::readParameterSet("input");
+    Util::ParameterSet* ps = FileParser::readParameterSet("input"); //TODO check that pointer (who is destructing it?
      //Zeeman coupling
 //    counter_z = ps->getInt("counter_z");
     checkInit = true;
@@ -155,7 +162,7 @@ void Calculation::Init(std::string input_file) //TODO
     deltaStart = ps->getComplex("DeltaStart");
     alpha = ps->getComplex("RashbaCoupling");
     couplingPotential = ps->getComplex("CouplingPot");
-    periodicBoundCond = ps->getInt("PeriodicBound");
+    periodicBoundCond = ps->getBool("PeriodicBound");
 
     InitDelta();
     InitIsMagnetized();
@@ -170,9 +177,16 @@ void Calculation::Init(std::string input_file) //TODO
     ENERGY_RESOLUTION = ps->getInt("EnergyRes");
     SCALE_FACTOR = ps->getDouble("ScaleFactor");
 
-    fileName = "TBTKResults.h5";
-    useGPU = ps->getInt("UseGPU");
+    fileName = ps->getString("OutputFilePath");
+    useGPU = ps->getBool("UseGPU");
+
+
+    FileWriter::setFileName(fileName);
+    FileWriter::clear();
+    FileWriter::writeParameterSet(ps);
 }
+
+
 
 
 Calculation::~Calculation()
@@ -379,20 +393,24 @@ void Calculation::SwapDeltas()
 void Calculation::WriteDelta(int loopNr)
 {
     stringstream loopFileNameAbs;
+    stringstream loopFileNameArg;
 //    stringstream loopFileNameArg;
     if(loopNr < 0)
     {
-        loopFileNameAbs << "DeltaLoop.h5";
+        loopFileNameAbs << "DeltaAbs";
+        loopFileNameArg << "DeltaArg";
     }
     else
     {
         if(loopNr < 10)
         {
-            loopFileNameAbs << "DeltaLoop_0" << loopNr << ".h5";
+            loopFileNameAbs << "DeltaLoopAbs_0" << loopNr;
+            loopFileNameArg << "DeltaLoopArg_0" << loopNr;
         }
         else
         {
-            loopFileNameAbs << "DeltaLoop_" << loopNr << ".h5";
+            loopFileNameAbs << "DeltaLoopAbs_" << loopNr;
+            loopFileNameArg << "DeltaLoopArg_" << loopNr;
         }
     }
 
@@ -401,10 +419,8 @@ void Calculation::WriteDelta(int loopNr)
 
     const int RANK = 2;
     int dims[RANK] = {SIZE_X, SIZE_Y};
-    FileWriter::setFileName(loopFileNameAbs.str());
-    FileWriter::clear();
-    FileWriter::write(&GetAbsVec(deltaOutput)[0], RANK, dims, "DeltaAbs");
-    FileWriter::write(&GetPhaseVec(deltaOutput)[0], RANK, dims, "DeltaArg");
+    FileWriter::write(&GetAbsVec(deltaOutput)[0], RANK, dims, loopFileNameAbs.str());
+    FileWriter::write(&GetPhaseVec(deltaOutput)[0], RANK, dims, loopFileNameArg.str());
 }
 
 
@@ -554,8 +570,7 @@ void Calculation::CalcLDOS()
                         {SIZE_X, 1, 2});
 
     //Set filename and remove any file already in the folder
-    FileWriter::setFileName(fileName);
-    FileWriter::clear();
+
     FileWriter::writeLDOS(ldos);
     delete ldos;
 }

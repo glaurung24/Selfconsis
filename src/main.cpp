@@ -1,11 +1,11 @@
-/** @package TBTKtemp
+/**
  *  @file main.cpp
- *  @brief Basic Chebyshev example
+ *  @brief Main function for calculating ...
  *
  *  TODO
  *
  *
- *  @author template by  Kristofer Björnson
+ *  @author Andreas Theiler
  */
 
 #include <complex>
@@ -14,33 +14,38 @@
 #include "Model.h"
 #include "Util.h"
 #include <sstream>
+#include "H5Cpp.h" //TODO
+#include <iomanip>
+#include <ctime>
 
 #include "Calculation.h"
+#include "ProcessArgs.h"
+
 
 using namespace std;
 using namespace TBTK;
 
 
-
-
-
-
-
-//complex<double>*** delta;
-//complex<double> ***delta_current, ***delta_old, ***delta_tmp;
-
-
-complex<double> funcDelta(Index, Index);
-void initDelta();
-void scLoop();
-
 int main(int argc, char **argv){
-	//Lattice size
+//    time_t t = time(NULL);
+//    stringstream ss;
+//    ss << "TBTKLog" << put_time(localtime(&t), "%d-%m-%Y_%H-%M-%S");
+//    Util::Streams::openLog(ss.str());
+    Util::Streams::openLog();
+
+
+    ofstream logFile("TBTKLog", fstream::out | fstream::app);
+    time_t t = time(NULL);
+    logFile << "\n\n###" << put_time(localtime(&t), "%d-%m-%Y_%H-%M-%S") << "\n\n";
+    Util::Streams::log.rdbuf(logFile.rdbuf());
+
+    ProcessArgs Args(argc, argv);
     Calculation::Init("input");
     Calculation::SetUpModel();
     Calculation::ScLoop(true);
     Calculation::CalcLDOS();
 
+    logFile.close(); //TODO
 	return 0;
 }
 
