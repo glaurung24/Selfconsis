@@ -42,9 +42,9 @@ int main(int argc, char **argv){
     ProcessArgs args(argc, argv);
 
     Calculation::Init("input");
-    Calculation::SetUpModel();
-    Calculation::ScLoop(true);
-    Calculation::CalcLDOS();
+//    Calculation::SetUpModel();
+//    Calculation::ScLoop(true);
+//    Calculation::CalcLDOS();
 
     logFile.close(); //TODO
 	return 0;

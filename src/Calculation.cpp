@@ -9,7 +9,6 @@
 #include "LDOS.h"
 #include "Util.h"
 #include <sstream>
-#include "ParameterSet.h"
 #include "FileParser.h"
 #include "FileReader.h"
 
@@ -46,11 +45,38 @@ double Calculation::epsDelta;
 bool Calculation::verbose;
 bool Calculation::useGPU;
 int Calculation::sCLoopCounter = 0;
+bool Calculation::sCLoop = true;
+unique_ptr<Util::ParameterSet> Calculation::ps;
 
 unique_ptr<ChebyshevSolver> Calculation::cSolver;
 unique_ptr<CPropertyExtractor> Calculation::pe;
 
 string Calculation::fileName;
+
+
+const string Calculation::SIZE_N_ID = "SizeN";
+const string Calculation::CHEM_POT_ID = "ChemPot";
+const string Calculation::HOPPING_POT_ID = "HoppingPot";
+const string Calculation::ZEEMAN_POT_ID = "ZeemanPot";
+const string Calculation::DELTA_START_ID = "DeltaStart";
+const string Calculation::RASHBA_COUPLING_ID = "RashbaCoupling";
+const string Calculation::COUPLING_POT_ID = "CouplingPot";
+const string Calculation::PERIODIC_BOUND_ID = "PeriodicBound";
+const string Calculation::EPSILON_DELTA_ID = "EpsDelta";
+const string Calculation::MAX_NR_SCL_RUNS_ID = "MaxNrSCRuns";
+const string Calculation::NR_CHEBYCHEV_COEFF_ID = "NumChebCoef";
+const string Calculation::ENERGY_RESOLUTION_ID = "EnergyRes";
+const string Calculation::SCALE_FACTOR_ID = "ScaleFactor";
+const string Calculation::USE_GPU_ID = "UseGPU";
+const string Calculation::SC_LOOP_ID = "SCLoop";
+const string Calculation::SC_LOOP_NR_ID = "SCLoopNr";
+const string Calculation::OUTPUT_FILE_PATH_ID = "OutputFilePath";
+const string Calculation::INIT_DELTA_ABS_ID = "DeltaAbs";
+const string Calculation::DELTA_LOOP_ABS_ID = "DeltaLoopAbs";
+const string Calculation::INIT_DELTA_ARG_ID = "DeltaArg";
+const string Calculation::DELTA_LOOP_ARG_ID = "DeltaLoopArg";
+
+
 
 
 void Calculation::Init()
@@ -114,6 +140,20 @@ void Calculation::InitDelta()
     }
 }
 
+void Calculation::InitDelta(int nr_sc_loop)
+{
+    deltaNew.reserve(SIZE_X);
+    deltaOld.reserve(SIZE_X);
+
+
+    for(int i =0; i < SIZE_X; i++)
+    {
+        vector<complex<double>> row(SIZE_Y, deltaStart);
+        deltaNew.push_back( row );
+        deltaOld.push_back( row );
+    }
+    readDelta(nr_sc_loop);
+}
 
 void Calculation::InitIsMagnetized()
 {
@@ -148,85 +188,114 @@ void Calculation::Delete()
 void Calculation::Init(std::string input_file) //TODO
 {
 
-    unique_ptr<Util::ParameterSet> ps = unique_ptr<Util::ParameterSet>(FileParser::readParameterSet(input_file));
+    ps = unique_ptr<Util::ParameterSet>(FileParser::readParameterSet(input_file));
      //Zeeman coupling
 //    counter_z = ps->getInt("counter_z");
     checkInit = true;
-    N = ps->getInt("SizeN");
+    N = ps->getInt(SIZE_N_ID);
     SIZE_X = 4*N;
     SIZE_Y = 2*N+1;
     SPIN_D = 4;
 
-    mu = ps->getComplex("ChemPot");
-    t = ps->getComplex("HoppingPot");
-    z = ps->getComplex("ZeemanPot"); //Zeeman coupling 0.5
+    mu = ps->getComplex(CHEM_POT_ID);
+    t = ps->getComplex(CHEM_POT_ID);
+    z = ps->getComplex(ZEEMAN_POT_ID); //Zeeman coupling 0.5
 
-    deltaStart = ps->getComplex("DeltaStart");
-    alpha = ps->getComplex("RashbaCoupling");
-    couplingPotential = ps->getComplex("CouplingPot");
-    periodicBoundCond = ps->getBool("PeriodicBound");
+    deltaStart = ps->getComplex(DELTA_START_ID);
+    alpha = ps->getComplex(RASHBA_COUPLING_ID);
+    couplingPotential = ps->getComplex(COUPLING_POT_ID);
+    periodicBoundCond = ps->getBool(PERIODIC_BOUND_ID);
 
     InitDelta();
     InitIsMagnetized();
 
-    epsDelta = ps->getDouble("EpsDelta");
-    numberSCRuns = ps->getInt("MaxNrSCRuns");
+    epsDelta = ps->getDouble(EPSILON_DELTA_ID);
+    numberSCRuns = ps->getInt(MAX_NR_SCL_RUNS_ID);
 
     cSolver = nullptr;
     pe = nullptr;
 
-    NUM_COEFFICIENTS = ps->getInt("NumChebCoef");
-    ENERGY_RESOLUTION = ps->getInt("EnergyRes");
-    SCALE_FACTOR = ps->getDouble("ScaleFactor");
+    NUM_COEFFICIENTS = ps->getInt(NR_CHEBYCHEV_COEFF_ID);
+    ENERGY_RESOLUTION = ps->getInt(ENERGY_RESOLUTION_ID);
+    SCALE_FACTOR = ps->getDouble(SCALE_FACTOR_ID);
+    sCLoop = ps->getBool(SC_LOOP_ID);
     sCLoopCounter = 0;
 
-    fileName = ps->getString("OutputFilePath");
-    useGPU = ps->getBool("UseGPU");
+    if(sCLoop)
+    {
+        ps->addInt(SC_LOOP_NR_ID, sCLoopCounter);
+    }
+
+    fileName = ps->getString(OUTPUT_FILE_PATH_ID);
+    useGPU = ps->getBool(USE_GPU_ID);
+
+    //TODO add if scloop here...
 
 
     FileWriter::setFileName(fileName);
+    FileReader::setFileName(fileName);
     FileWriter::clear();
     FileWriter::writeParameterSet(ps.get());
 }
 
+
+
 void Calculation::InitRestart(string output_file)
 {
 
-    unique_ptr<Util::ParameterSet> ps = unique_ptr<Util::ParameterSet>(FileReader::readParameterSet(output_file));
+    ps = unique_ptr<Util::ParameterSet>(FileReader::readParameterSet(output_file));
     checkInit = true;
-    N = ps->getInt("SizeN");
+    N = ps->getInt(SIZE_N_ID);
     SIZE_X = 4*N;
     SIZE_Y = 2*N+1;
     SPIN_D = 4;
 
-    mu = ps->getComplex("ChemPot");
-    t = ps->getComplex("HoppingPot");
-    z = ps->getComplex("ZeemanPot"); //Zeeman coupling 0.5
+    mu = ps->getComplex(CHEM_POT_ID);
+    t = ps->getComplex(CHEM_POT_ID);
+    z = ps->getComplex(ZEEMAN_POT_ID); //Zeeman coupling 0.5
 
-    deltaStart = ps->getComplex("DeltaStart");
-    alpha = ps->getComplex("RashbaCoupling");
-    couplingPotential = ps->getComplex("CouplingPot");
-    periodicBoundCond = ps->getBool("PeriodicBound");
+    deltaStart = ps->getComplex(DELTA_START_ID);
+    alpha = ps->getComplex(RASHBA_COUPLING_ID);
+    couplingPotential = ps->getComplex(COUPLING_POT_ID);
+    periodicBoundCond = ps->getBool(PERIODIC_BOUND_ID);
 
-    InitDelta();
     InitIsMagnetized();
 
-    epsDelta = ps->getDouble("EpsDelta");
-    numberSCRuns = ps->getInt("MaxNrSCRuns");
+    epsDelta = ps->getDouble(EPSILON_DELTA_ID);
+    numberSCRuns = ps->getInt(MAX_NR_SCL_RUNS_ID);
 
     cSolver = nullptr;
     pe = nullptr;
 
-    NUM_COEFFICIENTS = ps->getInt("NumChebCoef");
-    ENERGY_RESOLUTION = ps->getInt("EnergyRes");
-    SCALE_FACTOR = ps->getDouble("ScaleFactor");
+    NUM_COEFFICIENTS = ps->getInt(NR_CHEBYCHEV_COEFF_ID);
+    ENERGY_RESOLUTION = ps->getInt(ENERGY_RESOLUTION_ID);
+    SCALE_FACTOR = ps->getDouble(SCALE_FACTOR_ID);
+    sCLoop = ps->getBool(SC_LOOP_ID);
 
-    fileName = ps->getString("OutputFilePath");
-    useGPU = ps->getBool("UseGPU");
+    if(sCLoop)
+    {
+        sCLoopCounter = ps->getInt(SC_LOOP_NR_ID);
+        if(!sCLoopCounter)
+        {
+            cout << "The SC loop count has to be at least one for restarting the calculation." << endl;
+            exit(-1);
+        }
+        InitDelta(sCLoopCounter);
+    }
+
+    fileName = ps->getString(OUTPUT_FILE_PATH_ID);
+    useGPU = ps->getBool(USE_GPU_ID);
+
+
+    //TODO set delta
+
 
     //TODO do some more stuff here
 
-    FileWriter::setFileName(fileName);
+    FileWriter::setFileName(output_file);
+    FileReader::setFileName(fileName);
+
+
 }
 
 
@@ -367,6 +436,8 @@ void Calculation::ScLoop(bool writeEachDelta)
                     SCALE_FACTOR));
     }
 
+    //TODO add if scloop here...
+
 
 
 
@@ -418,6 +489,7 @@ void Calculation::ScLoop(bool writeEachDelta)
                 cout << "End of SC loop after " << sCLoopCounter + 1 <<
                 " iterations, reltive delta Delta: " << deltaRel << endl;
             }
+            //TODO write to paramset SC=false
             break;
         }
         sCLoopCounter++;
@@ -439,20 +511,20 @@ void Calculation::WriteDelta(int loopNr)
 //    stringstream loopFileNameArg;
     if(loopNr < 0)
     {
-        loopFileNameAbs << "DeltaAbs";
-        loopFileNameArg << "DeltaArg";
+        loopFileNameAbs << INIT_DELTA_ABS_ID;
+        loopFileNameArg << INIT_DELTA_ARG_ID;
     }
     else
     {
         if(loopNr < 10)
         {
-            loopFileNameAbs << "DeltaLoopAbs_0" << loopNr;
-            loopFileNameArg << "DeltaLoopArg_0" << loopNr;
+            loopFileNameAbs << DELTA_LOOP_ARG_ID << "_0" << loopNr;
+            loopFileNameArg << DELTA_LOOP_ARG_ID << "_0" << loopNr;
         }
         else
         {
-            loopFileNameAbs << "DeltaLoopAbs_" << loopNr;
-            loopFileNameArg << "DeltaLoopArg_" << loopNr;
+            loopFileNameAbs << DELTA_LOOP_ABS_ID <<  "_" << loopNr;
+            loopFileNameArg << DELTA_LOOP_ARG_ID <<  "_" << loopNr;
         }
     }
 
@@ -463,6 +535,41 @@ void Calculation::WriteDelta(int loopNr)
     int dims[RANK] = {SIZE_X, SIZE_Y};
     FileWriter::write(&GetAbsVec(deltaOutput)[0], RANK, dims, loopFileNameAbs.str());
     FileWriter::write(&GetPhaseVec(deltaOutput)[0], RANK, dims, loopFileNameArg.str());
+}
+
+void Calculation::readDelta(int nr_sc_loop)
+{
+    stringstream loopFileNameAbs;
+    stringstream loopFileNameArg;
+//    stringstream loopFileNameArg;
+    if(loopNr < 10)
+    {
+        loopFileNameAbs << DELTA_LOOP_ARG_ID << "_0" << loopNr;
+        loopFileNameArg << DELTA_LOOP_ARG_ID << "_0" << loopNr;
+    }
+    else
+    {
+        loopFileNameAbs << DELTA_LOOP_ABS_ID <<  "_" << loopNr;
+        loopFileNameArg << DELTA_LOOP_ARG_ID <<  "_" << loopNr;
+    }
+
+
+    double** delta_abs_from_file;
+    double** delta_arg_from_file;
+    int rank;
+    int* dims;
+    FileReader::read(delta_abs_from_file, &rank, &dims, loopFileNameAbs.str());
+    delete [] dims;
+    FileReader::read(delta_arg_from_file, &rank, &dims, loopFileNameAbs.str());
+
+    for(int i=0; i < deltaNew.size(); i++)
+    {
+        for(int j=0; j < deltaNew[i].size(); j++)
+        {
+            deltaNew[i][j] = //TODO complex constructor calling with argument and absolute value
+        }
+    }
+    delete [] dims;
 }
 
 

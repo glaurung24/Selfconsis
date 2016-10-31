@@ -7,6 +7,7 @@
 #include "ChebyshevSolver.h"
 #include "CPropertyExtractor.h"
 #include "Matrix.h"
+#include "ParameterSet.h"
 
 using namespace std;
 using namespace TBTK;
@@ -34,6 +35,7 @@ class Calculation
 
 
         static void InitDelta();
+        static void InitDelta(int);
         static complex<double> FuncDelta(Index, Index);
         static vector<complex<double>> ConvertMatrixToVector(const Matrix<complex<double>>&);
 //        static complex<double>** Convert1DVectorTo2DArray(vector<complex<double>> const, int, int);
@@ -44,6 +46,7 @@ class Calculation
         static void WriteDelta(int);
         static void SwapDeltas();
         static void InitIsMagnetized();
+        static void readDelta(int);
 
 
 
@@ -70,6 +73,9 @@ class Calculation
         static Matrix<complex<double>>  deltaOld;
         static bool checkInit;
         static bool modelSetUp;
+        static bool sCLoop;
+        static int sCLoopCounter;
+        static unique_ptr<Util::ParameterSet> ps;
 
         static int numberSCRuns;
         static double epsDelta;
@@ -78,6 +84,29 @@ class Calculation
         static unique_ptr<CPropertyExtractor> pe;
         static string fileName;
         static bool useGPU;
+
+        static const string SIZE_N_ID;
+        static const string CHEM_POT_ID;
+        static const string HOPPING_POT_ID;
+        static const string ZEEMAN_POT_ID;
+        static const string DELTA_START_ID;
+        static const string RASHBA_COUPLING_ID;
+        static const string COUPLING_POT_ID;
+        static const string PERIODIC_BOUND_ID;
+        static const string EPSILON_DELTA_ID;
+        static const string MAX_NR_SCL_RUNS_ID;
+        static const string NR_CHEBYCHEV_COEFF_ID;
+        static const string ENERGY_RESOLUTION_ID;
+        static const string SCALE_FACTOR_ID;
+        static const string USE_GPU_ID;
+        static const string OUTPUT_FILE_PATH_ID;
+        static const string SC_LOOP_ID;
+        static const string SC_LOOP_NR_ID;
+        static const string INIT_DELTA_ABS_ID;
+        static const string DELTA_LOOP_ABS_ID;
+        static const string INIT_DELTA_ARG_ID;
+        static const string DELTA_LOOP_ARG_ID;
+
 };
 
 #endif // CALCULATION_H
