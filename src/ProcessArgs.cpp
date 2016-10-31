@@ -11,6 +11,8 @@ const int ProcessArgs::EXPECT_OUTPUT_FILE_PATH = -2;
 const string ProcessArgs::FLAG_RESTART = "-r";
 const string ProcessArgs::FLAG_INPUT_FILE_PATH = "-i";
 const string ProcessArgs::FLAG_OUTPUT_FILE_PATH = "-o";
+const string ProcessArgs::FLAG_VERBOSE = "-v";
+const string ProcessArgs::FLAG_NOT_WRITE_DELTA = "-nwd";
 
 
 ProcessArgs::ProcessArgs(int argc, char **argv)
@@ -61,6 +63,14 @@ ProcessArgs::ProcessArgs(int argc, char **argv)
             expectStringArg = true;
             expectArgument = EXPECT_OUTPUT_FILE_PATH;
         }
+        else if(input.compare(FLAG_VERBOSE) == 0)
+        {
+            verbose = true;
+        }
+        else if(input.compare(FLAG_NOT_WRITE_DELTA) == 0)
+        {
+            writeDelta = false;
+        }
         else
         {
             cout << "error in ProcessArgs" << endl;
@@ -80,7 +90,22 @@ string ProcessArgs::getInputFilePath() const
     return inputFilePath;
 }
 
+string ProcessArgs::getOutputFilePath() const
+{
+    return outputFilePath;
+}
+
 bool ProcessArgs::getRestart() const
 {
     return restart;
+}
+
+bool ProcessArgs::getVerbose() const
+{
+    return verbose;
+}
+
+bool ProcessArgs::getWriteDelta() const
+{
+    return writeDelta;
 }

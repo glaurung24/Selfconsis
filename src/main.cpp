@@ -41,10 +41,19 @@ int main(int argc, char **argv){
 
     ProcessArgs args(argc, argv);
 
-    Calculation::Init("input");
-//    Calculation::SetUpModel();
-//    Calculation::ScLoop(true);
-//    Calculation::CalcLDOS();
+    if(args.getRestart())
+    {
+        Calculation::InitRestart(args.getOutputFilePath());
+    }
+    else
+    {
+        Calculation::Init(args.getInputFilePath());
+    }
+    Calculation::setVerbose(args.getVerbose());
+    bool writeDelta = args.getWriteDelta();
+    Calculation::SetUpModel();
+    Calculation::ScLoop(writeDelta);
+    Calculation::CalcLDOS();
 
     logFile.close(); //TODO
 	return 0;

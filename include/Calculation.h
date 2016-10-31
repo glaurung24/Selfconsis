@@ -25,7 +25,7 @@ class Calculation
         static void ScLoop(bool writeEachDelta = false);
         static void Delete();
         static void CalcLDOS();
-        static void SetZeemanPot(complex<double>);
+        static void setVerbose(bool);
 
 
     protected:
@@ -38,12 +38,13 @@ class Calculation
         static void InitDelta(int);
         static complex<double> FuncDelta(Index, Index);
         static vector<complex<double>> ConvertMatrixToVector(const Matrix<complex<double>>&);
+        static Matrix<double> ConvertVectorToMatrix(const double *, int , int );
 //        static complex<double>** Convert1DVectorTo2DArray(vector<complex<double>> const, int, int);
-        static vector<double> GetAbsVec(vector<complex<double>>);
-        static vector<double> GetPhaseVec(vector<complex<double>>);
+        static vector<double> GetRealVec(vector<complex<double>>);
+        static vector<double> GetImagVec(vector<complex<double>>);
         static void SetBoundary(complex<double>**);
         static double RelDiffDelta();
-        static void WriteDelta(int);
+        static void WriteDelta(int, double);
         static void SwapDeltas();
         static void InitIsMagnetized();
         static void readDelta(int);
@@ -102,11 +103,11 @@ class Calculation
         static const string OUTPUT_FILE_PATH_ID;
         static const string SC_LOOP_ID;
         static const string SC_LOOP_NR_ID;
-        static const string INIT_DELTA_ABS_ID;
-        static const string DELTA_LOOP_ABS_ID;
-        static const string INIT_DELTA_ARG_ID;
-        static const string DELTA_LOOP_ARG_ID;
-
+        static const string INIT_DELTA_REAL_ID;
+        static const string DELTA_LOOP_REAL_ID;
+        static const string INIT_DELTA_IMAG_ID;
+        static const string DELTA_LOOP_IMAG_ID;
+        static const string EPS_DELTA_ID;
 };
 
 #endif // CALCULATION_H
