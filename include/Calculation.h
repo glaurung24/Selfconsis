@@ -83,7 +83,8 @@ class Calculation
         static bool verbose;
         static unique_ptr<ChebyshevSolver> cSolver;
         static unique_ptr<CPropertyExtractor> pe;
-        static string fileName;
+        static string inputFileName;
+        static string outputFileName;
         static bool useGPU;
 
         static const string SIZE_N_ID;

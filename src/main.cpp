@@ -43,15 +43,14 @@ int main(int argc, char **argv){
 
     if(args.getRestart())
     {
-        cout << "restart!" << endl;
-        Calculation::InitRestart(args.getOutputFilePath());
+        Calculation::InitRestart(args.getInputFilePath());
     }
     else
     {
-        cout << "not restart!" << endl;
         Calculation::Init(args.getInputFilePath());
     }
-    Calculation::setVerbose(args.getVerbose());
+//    Calculation::setVerbose(args.getVerbose());
+    Calculation::setVerbose(true);
     bool writeDelta = args.getWriteDelta();
     Calculation::SetUpModel();
     Calculation::ScLoop(writeDelta);

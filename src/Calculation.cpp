@@ -52,7 +52,8 @@ unique_ptr<Util::ParameterSet> Calculation::ps;
 unique_ptr<ChebyshevSolver> Calculation::cSolver;
 unique_ptr<CPropertyExtractor> Calculation::pe;
 
-string Calculation::fileName;
+string Calculation::inputFileName;
+string Calculation::outputFileName;
 
 
 const string Calculation::SIZE_N_ID = "SizeN";
@@ -78,9 +79,6 @@ const string Calculation::INIT_DELTA_IMAG_ID = "DeltaImag";
 const string Calculation::DELTA_LOOP_IMAG_ID = "DeltaLoopImag";
 const string Calculation::EPS_DELTA_ID = "EpsDelta";
 const string Calculation::IS_MAGNETIZED_ID = "IsMagnetized";
-
-
-
 
 void Calculation::Init()
 {
@@ -113,18 +111,17 @@ void Calculation::Init()
     SCALE_FACTOR = 10.;
     sCLoopCounter = 0;
 
-    fileName = "TBTKResults.h5";
+    outputFileName = "TBTKResults.h5";
     useGPU = false;
 
 
-    FileWriter::setFileName(fileName);
+    FileWriter::setFileName(outputFileName);
     FileWriter::clear();
 
 }
 
 void Calculation::InitDelta()
 {
-    cout << deltaStart << endl;
     deltaNew.reserve(SIZE_X);
     deltaOld.reserve(SIZE_X);
 
@@ -171,7 +168,6 @@ void Calculation::InitIsMagnetized(bool magnetized)
     }
 }
 
-
 void Calculation::Delete()
 {
 //    for(int i=0; i < SIZE_Y; i++)
@@ -183,12 +179,10 @@ void Calculation::Delete()
 //    delete deltaOld;
 }
 
-
-
 void Calculation::Init(std::string input_file) //TODO
 {
-
-    ps = unique_ptr<Util::ParameterSet>(FileParser::readParameterSet(input_file));
+    inputFileName = input_file;
+    ps = unique_ptr<Util::ParameterSet>(FileParser::readParameterSet(inputFileName));
      //Zeeman coupling
 //    counter_z = ps->getInt("counter_z");
     checkInit = true;
@@ -222,28 +216,38 @@ void Calculation::Init(std::string input_file) //TODO
     SCALE_FACTOR = ps->getDouble(SCALE_FACTOR_ID);
     sCLoop = ps->getBool(SC_LOOP_ID);
     sCLoopCounter = 0;
-
-    if(sCLoop)
+    if(ps->intExists(SC_LOOP_NR_ID))
+    {
+        if(ps->getInt(SC_LOOP_NR_ID))
+        {
+            cout << "Calculation was already started once. Use -r flag to restart." << endl;
+            exit(-1);
+        }
+    }
+    else
     {
         ps->addInt(SC_LOOP_NR_ID, sCLoopCounter);
     }
 
-    fileName = ps->getString(OUTPUT_FILE_PATH_ID);
+
+    outputFileName = ps->getString(OUTPUT_FILE_PATH_ID);
     useGPU = ps->getBool(USE_GPU_ID);
 
     //TODO add if scloop here...
-    FileWriter::setFileName(fileName);
-    FileReader::setFileName(fileName);
+    FileWriter::setFileName(outputFileName);
+    FileReader::setFileName(outputFileName);
     FileWriter::clear();
     FileWriter::writeParameterSet(ps.get());
 }
 
-
-
-void Calculation::InitRestart(string output_file)
+void Calculation::InitRestart(string input_file)
 {
-
-    ps = unique_ptr<Util::ParameterSet>(FileReader::readParameterSet(output_file));
+    inputFileName = input_file;
+    unique_ptr<Util::ParameterSet> psInput = unique_ptr<Util::ParameterSet>(FileParser::readParameterSet(inputFileName));
+    outputFileName = psInput->getString(OUTPUT_FILE_PATH_ID);
+    FileWriter::setFileName(outputFileName);
+    FileReader::setFileName(outputFileName);
+    ps = unique_ptr<Util::ParameterSet>(FileReader::readParameterSet());
     checkInit = true;
     N = ps->getInt(SIZE_N_ID);
     SIZE_X = 4*N;
@@ -274,7 +278,11 @@ void Calculation::InitRestart(string output_file)
 
     if(sCLoop)
     {
-        sCLoopCounter = ps->getInt(SC_LOOP_NR_ID);
+        sCLoopCounter = psInput->getInt(SC_LOOP_NR_ID);
+        if(!ps->intExists(SC_LOOP_NR_ID))
+        {
+            ps->addInt(SC_LOOP_NR_ID, sCLoopCounter);
+        }
         if(!sCLoopCounter)
         {
             cout << "The SC loop count has to be at least one for restarting the calculation." << endl;
@@ -283,22 +291,16 @@ void Calculation::InitRestart(string output_file)
         InitDelta(sCLoopCounter);
     }
 
-    fileName = ps->getString(OUTPUT_FILE_PATH_ID);
     useGPU = ps->getBool(USE_GPU_ID);
 
-    FileWriter::setFileName(output_file);
-    FileReader::setFileName(fileName);
     readDelta(ps->getInt(SC_LOOP_NR_ID));
 }
-
-
 
 Calculation::~Calculation()
 {
     //dtor //TODO destroy delta
     //TODO think about what happens if an exception is thrown
 }
-
 
 void Calculation::SetUpModel()
 {
@@ -374,7 +376,6 @@ void Calculation::SetUpModel()
     }
 }
 
-
 complex<double> Calculation::FuncDelta(Index to, Index from)
 {
 //    cout << "delta1" << endl;
@@ -403,8 +404,6 @@ complex<double> Calculation::FuncDelta(Index to, Index from)
 //    int to_s = to.at(2);
 }
 
-
-
 void Calculation::ScLoop(bool writeEachDelta)
 {
     if(!checkInit  & !modelSetUp)
@@ -429,9 +428,7 @@ void Calculation::ScLoop(bool writeEachDelta)
                     SCALE_FACTOR));
     }
 
-    Matrix<complex<double>> debug = deltaNew;
-
-    if(writeEachDelta)
+    if(writeEachDelta && !sCLoopCounter)
     {
         WriteDelta(sCLoopCounter, -1);
         //TODO write sc loop number to file
@@ -439,7 +436,7 @@ void Calculation::ScLoop(bool writeEachDelta)
 
     if(!sCLoop)
     {
-        if(!verbose)
+        if(verbose)
         {
             cout << "Omiting SC loop..." << endl;
         }
@@ -454,47 +451,41 @@ void Calculation::ScLoop(bool writeEachDelta)
         SwapDeltas();
         if(useGPU)
         {
-            cout << "bloed" << endl;
             model.reconstructCOO();
         }
 
 
-//        #pragma omp parallel for
+        #pragma omp parallel for
         for(int x=0; x < SIZE_X; x++)
         {
             for(int y=0; y < SIZE_Y; y++)
             {
-                cout << "old: " << deltaOld[x][y] << endl;
-                deltaNew[x][y] = 0.3; //-pe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
-                cout << "new: " << deltaNew[x][y] << endl;
+                deltaNew[x][y] = -pe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
             }
         }
 
-        cout << "finished" << endl;
-//        setBoundary(deltaNew);
-
         double deltaRel = RelDiffDelta();
-        if(!verbose)
+        if(verbose)
         {
             cout << "Loop number: " << sCLoopCounter +1 << ", rel eps= " << deltaRel << endl;
         }
         if(writeEachDelta)
         {
-            WriteDelta(sCLoopCounter + 1, epsDelta);
+            WriteDelta(sCLoopCounter + 1, deltaRel);
             ps->setInt(SC_LOOP_NR_ID, sCLoopCounter + 1);
-            FileWriter::writeParameterSet(ps.get());
+            FileParser::writeParameterSet(ps.get(), inputFileName);
         }
 
         if(deltaRel < epsDelta)
         {
 
-            if(!verbose)
+            if(verbose)
             {
                 cout << "End of SC loop after " << sCLoopCounter + 1 <<
                 " iterations, reltive delta Delta: " << deltaRel << endl;
             }
             ps->setBool(SC_LOOP_ID, false);
-            FileWriter::writeParameterSet(ps.get());
+            FileParser::writeParameterSet(ps.get(), inputFileName);
             break;
         }
         sCLoopCounter++;
@@ -540,8 +531,8 @@ void Calculation::WriteDelta(int loopNr, double epsDelta)
     int dims[RANK] = {SIZE_X, SIZE_Y};
     FileWriter::write(&GetRealVec(deltaOutput)[0], RANK, dims, loopFileNameReal.str());
     FileWriter::write(&GetImagVec(deltaOutput)[0], RANK, dims, loopFileNameImag.str());
-//    FileWriter::writeAttributes(&epsDelta, &EPS_DELTA_ID, 1, loopFileNameReal.str());
-//    FileWriter::writeAttributes(&epsDelta, &EPS_DELTA_ID, 1, loopFileNameImag.str());
+    FileWriter::writeAttributes(&epsDelta, &EPS_DELTA_ID, 1, loopFileNameReal.str());
+    FileWriter::writeAttributes(&epsDelta, &EPS_DELTA_ID, 1, loopFileNameImag.str());
 }
 
 void Calculation::readDelta(int nr_sc_loop)
@@ -584,7 +575,6 @@ void Calculation::readDelta(int nr_sc_loop)
     delete [] delta_imag_from_file;
 }
 
-
 vector<double> Calculation::GetRealVec(vector<complex<double>> input)
 {
     vector<double> output;
@@ -596,7 +586,6 @@ vector<double> Calculation::GetRealVec(vector<complex<double>> input)
     return output;
 }
 
-
 double Calculation::RelDiffDelta()
 {
     double diffDelta = 0;
@@ -606,16 +595,17 @@ double Calculation::RelDiffDelta()
     {
         for(int y=0; y < SIZE_Y; y++)
         {
-            diffDelta = real(deltaNew[x][y]-deltaOld[x][y]);
+            diffDelta = abs(real(deltaNew[x][y]-deltaOld[x][y]));
             if(diffDelta > diffDeltaMax)
             {
                 diffDeltaMax = diffDelta;
-                deltaRel = diffDeltaMax/real(deltaOld[x][y]);
+                deltaRel = diffDeltaMax/abs(real(deltaOld[x][y]));
             }
         }
     }
     return deltaRel;
 }
+
 vector<double> Calculation::GetImagVec(vector<complex<double>> input)
 {
     vector<double> output;
@@ -670,18 +660,18 @@ Matrix<double> Calculation::ConvertVectorToMatrix(const double *input, int sizeX
 {
     Matrix<double> out;
     out.reserve(sizeX);
-
     for(int i=0; i < sizeX; i++)
     {
-        out[i].reserve(sizeY);
+        vector<double> row;
+        row.reserve(sizeY);
         for(int j=0; j < sizeY; j++)
         {
-            out[i].push_back(input[j+i*sizeY]);
+            row.push_back(input[j+i*sizeY]);
         }
+        out.push_back(row);
     }
     return out;
 }
-
 
 void Calculation::CalcLDOS()
 {
@@ -736,7 +726,6 @@ void Calculation::CalcLDOS()
     FileWriter::writeLDOS(ldos);
     delete ldos;
 }
-
 
 void Calculation::setVerbose(bool input)
 {
