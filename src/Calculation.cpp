@@ -531,8 +531,8 @@ void Calculation::WriteDelta(int loopNr, double epsDelta)
     int dims[RANK] = {SIZE_X, SIZE_Y};
     FileWriter::write(&GetRealVec(deltaOutput)[0], RANK, dims, loopFileNameReal.str());
     FileWriter::write(&GetImagVec(deltaOutput)[0], RANK, dims, loopFileNameImag.str());
-    FileWriter::writeAttributes(&epsDelta, &EPS_DELTA_ID, 1, loopFileNameReal.str());
-    FileWriter::writeAttributes(&epsDelta, &EPS_DELTA_ID, 1, loopFileNameImag.str());
+//    FileWriter::writeAttributes(&epsDelta, &EPS_DELTA_ID, 1, loopFileNameReal.str());
+//    FileWriter::writeAttributes(&epsDelta, &EPS_DELTA_ID, 1, loopFileNameImag.str());
 }
 
 void Calculation::readDelta(int nr_sc_loop)
