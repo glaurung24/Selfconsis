@@ -37,7 +37,7 @@ Model Calculation::model;
 int Calculation::NUM_COEFFICIENTS;
 int Calculation::ENERGY_RESOLUTION;
 double Calculation::SCALE_FACTOR;
-Matrix<complex<double>>  Calculation::deltaNew;
+Matrix<complex<double>> Calculation::deltaNew;
 Matrix<complex<double>> Calculation::deltaOld;
 bool Calculation::checkInit = false;
 bool Calculation::modelSetUp = false;
@@ -77,6 +77,7 @@ const string Calculation::DELTA_LOOP_REAL_ID = "DeltaLoopReal";
 const string Calculation::INIT_DELTA_IMAG_ID = "DeltaImag";
 const string Calculation::DELTA_LOOP_IMAG_ID = "DeltaLoopImag";
 const string Calculation::EPS_DELTA_ID = "EpsDelta";
+const string Calculation::IS_MAGNETIZED_ID = "IsMagnetized";
 
 
 
@@ -99,7 +100,7 @@ void Calculation::Init()
     periodicBoundCond = false;
 
     InitDelta();
-    InitIsMagnetized();
+    InitIsMagnetized(true);
 
     epsDelta = 0.05;
     numberSCRuns = 2;
@@ -123,6 +124,7 @@ void Calculation::Init()
 
 void Calculation::InitDelta()
 {
+    cout << deltaStart << endl;
     deltaNew.reserve(SIZE_X);
     deltaOld.reserve(SIZE_X);
 
@@ -132,13 +134,6 @@ void Calculation::InitDelta()
         vector<complex<double>> row(SIZE_Y, deltaStart);
         deltaNew.push_back( row );
         deltaOld.push_back( row );
-//        deltaNew[i].reserve();
-//        deltaOld[i].reserve(SIZE_Y);
-//        for(unsigned int j=0; j < deltaNew[i].size(); j++)
-//        {
-//            deltaNew[i].push_back(deltaStart); //TODO mabye faster way?
-//            deltaOld[i].push_back(deltaStart);
-//        }
     }
 }
 
@@ -157,7 +152,7 @@ void Calculation::InitDelta(int nr_sc_loop)
     readDelta(nr_sc_loop);
 }
 
-void Calculation::InitIsMagnetized()
+void Calculation::InitIsMagnetized(bool magnetized)
 {
     isMagnetized.reserve(SIZE_X);
 
@@ -168,8 +163,11 @@ void Calculation::InitIsMagnetized()
         isMagnetized.push_back( row );
     }
 
-    for(int x = SIZE_X/4; x < 3*SIZE_X/4; x++){
+    if(magnetized)
+    {
+        for(int x = SIZE_X/4; x < 3*SIZE_X/4; x++){
         isMagnetized[x][SIZE_Y/2]=true;
+    }
     }
 }
 
@@ -209,7 +207,9 @@ void Calculation::Init(std::string input_file) //TODO
     periodicBoundCond = ps->getBool(PERIODIC_BOUND_ID);
 
     InitDelta();
-    InitIsMagnetized();
+    InitIsMagnetized(ps->getBool(IS_MAGNETIZED_ID));
+
+
 
     epsDelta = ps->getDouble(EPSILON_DELTA_ID);
     numberSCRuns = ps->getInt(MAX_NR_SCL_RUNS_ID);
@@ -259,7 +259,7 @@ void Calculation::InitRestart(string output_file)
     couplingPotential = ps->getComplex(COUPLING_POT_ID);
     periodicBoundCond = ps->getBool(PERIODIC_BOUND_ID);
 
-    InitIsMagnetized();
+    InitIsMagnetized(ps->getBool(IS_MAGNETIZED_ID));
 
     epsDelta = ps->getDouble(EPSILON_DELTA_ID);
     numberSCRuns = ps->getInt(MAX_NR_SCL_RUNS_ID);
@@ -429,7 +429,7 @@ void Calculation::ScLoop(bool writeEachDelta)
                     SCALE_FACTOR));
     }
 
-
+    Matrix<complex<double>> debug = deltaNew;
 
     if(writeEachDelta)
     {
@@ -454,20 +454,23 @@ void Calculation::ScLoop(bool writeEachDelta)
         SwapDeltas();
         if(useGPU)
         {
+            cout << "bloed" << endl;
             model.reconstructCOO();
         }
 
 
-        #pragma omp parallel for
+//        #pragma omp parallel for
         for(int x=0; x < SIZE_X; x++)
         {
             for(int y=0; y < SIZE_Y; y++)
             {
-                deltaNew[x][y] = -pe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
+                cout << "old: " << deltaOld[x][y] << endl;
+                deltaNew[x][y] = 0.3; //-pe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
+                cout << "new: " << deltaNew[x][y] << endl;
             }
         }
 
-
+        cout << "finished" << endl;
 //        setBoundary(deltaNew);
 
         double deltaRel = RelDiffDelta();

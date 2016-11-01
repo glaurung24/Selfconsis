@@ -46,7 +46,7 @@ class Calculation
         static double RelDiffDelta();
         static void WriteDelta(int, double);
         static void SwapDeltas();
-        static void InitIsMagnetized();
+        static void InitIsMagnetized(bool);
         static void readDelta(int);
 
 
@@ -108,6 +108,7 @@ class Calculation
         static const string INIT_DELTA_IMAG_ID;
         static const string DELTA_LOOP_IMAG_ID;
         static const string EPS_DELTA_ID;
+        static const string IS_MAGNETIZED_ID;
 };
 
 #endif // CALCULATION_H
