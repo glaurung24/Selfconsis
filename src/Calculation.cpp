@@ -274,11 +274,11 @@ void Calculation::InitRestart(string input_file)
     NUM_COEFFICIENTS = ps->getInt(NR_CHEBYCHEV_COEFF_ID);
     ENERGY_RESOLUTION = ps->getInt(ENERGY_RESOLUTION_ID);
     SCALE_FACTOR = ps->getDouble(SCALE_FACTOR_ID);
-    sCLoop = ps->getBool(SC_LOOP_ID);
+    sCLoop = psInput->getBool(SC_LOOP_ID);
+    sCLoopCounter = psInput->getInt(SC_LOOP_NR_ID);
 
     if(sCLoop)
     {
-        sCLoopCounter = psInput->getInt(SC_LOOP_NR_ID);
         if(!ps->intExists(SC_LOOP_NR_ID))
         {
             ps->addInt(SC_LOOP_NR_ID, sCLoopCounter);
@@ -293,7 +293,7 @@ void Calculation::InitRestart(string input_file)
 
     useGPU = ps->getBool(USE_GPU_ID);
 
-    readDelta(ps->getInt(SC_LOOP_NR_ID));
+    readDelta(sCLoopCounter);
 }
 
 Calculation::~Calculation()
@@ -719,11 +719,11 @@ void Calculation::CalcLDOS()
 
     //Extract local density of states and write to file
     Property::LDOS *ldos = pe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
-                        {SIZE_X, 1, 2});
+                        {SIZE_X, 1, 4});
 
     //Set filename and remove any file already in the folder
 
-    FileWriter::writeLDOS(ldos);
+    FileWriter::writeLDOS(ldos, "LDOS_full");
     delete ldos;
 }
 
