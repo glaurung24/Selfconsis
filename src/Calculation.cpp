@@ -192,7 +192,7 @@ void Calculation::Init(std::string input_file) //TODO
     SPIN_D = 4;
 
     mu = ps->getComplex(CHEM_POT_ID);
-    t = ps->getComplex(CHEM_POT_ID);
+    t = ps->getComplex(HOPPING_POT_ID);
     z = ps->getComplex(ZEEMAN_POT_ID); //Zeeman coupling 0.5
 
     deltaStart = ps->getComplex(DELTA_START_ID);
@@ -255,7 +255,7 @@ void Calculation::InitRestart(string input_file)
     SPIN_D = 4;
 
     mu = ps->getComplex(CHEM_POT_ID);
-    t = ps->getComplex(CHEM_POT_ID);
+    t = ps->getComplex(HOPPING_POT_ID);
     z = ps->getComplex(ZEEMAN_POT_ID); //Zeeman coupling 0.5
 
     deltaStart = ps->getComplex(DELTA_START_ID);
@@ -723,7 +723,7 @@ void Calculation::CalcLDOS()
 
     //Set filename and remove any file already in the folder
 
-    FileWriter::writeLDOS(ldos, "LDOS_full");
+    FileWriter::writeLDOS(ldos, "LDOS");
     delete ldos;
 }
 
