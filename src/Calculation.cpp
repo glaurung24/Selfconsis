@@ -202,7 +202,10 @@ void Calculation::Init(std::string input_file) //TODO
      //Zeeman coupling
 //    counter_z = ps->getInt("counter_z");
     checkInit = true;
-    largerBorders = ps->getBool(LARGER_BORDERS_ID);
+    if(ps->boolExists(LARGER_BORDERS_ID))
+    {
+        largerBorders = ps->getBool(LARGER_BORDERS_ID);
+    }
     N = ps->getInt(SIZE_N_ID);
     if(largerBorders)
     {
@@ -274,7 +277,10 @@ void Calculation::InitRestart(string input_file)
     FileReader::setFileName(outputFileName);
     ps = unique_ptr<Util::ParameterSet>(FileReader::readParameterSet());
     checkInit = true;
-    largerBorders = ps->getBool(LARGER_BORDERS_ID);
+    if(ps->boolExists(LARGER_BORDERS_ID))
+    {
+        largerBorders = ps->getBool(LARGER_BORDERS_ID);
+    }
     N = ps->getInt(SIZE_N_ID);
     if(largerBorders)
     {
