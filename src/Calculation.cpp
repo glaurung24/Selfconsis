@@ -44,6 +44,8 @@ bool Calculation::modelSetUp = false;
 int Calculation::numberSCRuns;
 double Calculation::epsDelta;
 bool Calculation::verbose;
+bool Calculation::largerBorders = false;
+bool Calculation::useChebyChev = true;
 bool Calculation::useGPU;
 int Calculation::sCLoopCounter = 0;
 bool Calculation::sCLoop = true;
@@ -79,6 +81,8 @@ const string Calculation::INIT_DELTA_IMAG_ID = "DeltaImag";
 const string Calculation::DELTA_LOOP_IMAG_ID = "DeltaLoopImag";
 const string Calculation::EPS_DELTA_ID = "EpsDelta";
 const string Calculation::IS_MAGNETIZED_ID = "IsMagnetized";
+const string Calculation::LARGER_BORDERS_ID = "DoubleBorders";
+const string Calculation::USE_CHEBYCHEV_ID = "UseChebyChev";
 
 void Calculation::Init()
 {
@@ -159,12 +163,24 @@ void Calculation::InitIsMagnetized(bool magnetized)
         vector<bool> row(SIZE_Y, false);
         isMagnetized.push_back( row );
     }
+    cout << SIZE_X << ", " << SIZE_Y << endl;
 
     if(magnetized)
     {
-        for(int x = SIZE_X/4; x < 3*SIZE_X/4; x++){
-        isMagnetized[x][SIZE_Y/2]=true;
-    }
+        if(largerBorders)
+        {
+            for(int x = SIZE_X/3; x < 2*SIZE_X/3; x++)
+            {
+                isMagnetized[x][SIZE_Y/2]=true;
+            }
+        }
+        else
+        {
+            for(int x = SIZE_X/4; x < 3*SIZE_X/4; x++)
+            {
+                isMagnetized[x][SIZE_Y/2]=true;
+            }
+        }
     }
 }
 
@@ -186,9 +202,18 @@ void Calculation::Init(std::string input_file) //TODO
      //Zeeman coupling
 //    counter_z = ps->getInt("counter_z");
     checkInit = true;
+    largerBorders = ps->getBool(LARGER_BORDERS_ID);
     N = ps->getInt(SIZE_N_ID);
-    SIZE_X = 4*N;
-    SIZE_Y = 2*N+1;
+    if(largerBorders)
+    {
+        SIZE_X = 6*N;
+        SIZE_Y = 4*N+1;
+    }
+    else
+    {
+        SIZE_X = 4*N;
+        SIZE_Y = 2*N+1;
+    }
     SPIN_D = 4;
 
     mu = ps->getComplex(CHEM_POT_ID);
@@ -249,9 +274,18 @@ void Calculation::InitRestart(string input_file)
     FileReader::setFileName(outputFileName);
     ps = unique_ptr<Util::ParameterSet>(FileReader::readParameterSet());
     checkInit = true;
+    largerBorders = ps->getBool(LARGER_BORDERS_ID);
     N = ps->getInt(SIZE_N_ID);
-    SIZE_X = 4*N;
-    SIZE_Y = 2*N+1;
+    if(largerBorders)
+    {
+        SIZE_X = 6*N;
+        SIZE_Y = 4*N+1;
+    }
+    else
+    {
+        SIZE_X = 4*N;
+        SIZE_Y = 2*N+1;
+    }
     SPIN_D = 4;
 
     mu = ps->getComplex(CHEM_POT_ID);
@@ -730,5 +764,10 @@ void Calculation::CalcLDOS()
 void Calculation::setVerbose(bool input)
 {
     verbose = input;
+}
+
+void Calculation::setLargerBorders(bool input)
+{
+    largerBorders = input;
 }
 

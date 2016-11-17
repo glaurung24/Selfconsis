@@ -1,5 +1,5 @@
 int	SizeN	= 10
-int	MaxNrSCRuns	= 99 
+int	MaxNrSCRuns	= 99
 int	NumChebCoef	= 1000
 int	EnergyRes	= 2000
 int	SCLoopNr	= 0
@@ -16,3 +16,5 @@ bool	PeriodicBound	= 1
 bool	UseGPU	= 0
 bool	SCLoop	= 1
 bool	IsMagnetized	= 1
+bool	DoubleBorders	= 0
+bool	UseChebyChev	= 1

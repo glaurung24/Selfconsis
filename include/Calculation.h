@@ -26,6 +26,7 @@ class Calculation
         static void Delete();
         static void CalcLDOS();
         static void setVerbose(bool);
+        static void setLargerBorders(bool);
 
 
     protected:
@@ -81,6 +82,8 @@ class Calculation
         static int numberSCRuns;
         static double epsDelta;
         static bool verbose;
+        static bool largerBorders;
+        static bool useChebyChev;
         static unique_ptr<ChebyshevSolver> cSolver;
         static unique_ptr<CPropertyExtractor> pe;
         static string inputFileName;
@@ -110,6 +113,8 @@ class Calculation
         static const string DELTA_LOOP_IMAG_ID;
         static const string EPS_DELTA_ID;
         static const string IS_MAGNETIZED_ID;
+        static const string LARGER_BORDERS_ID;
+        static const string USE_CHEBYCHEV_ID;
 };
 
 #endif // CALCULATION_H

@@ -15,8 +15,11 @@ class ProcessArgs
         bool getRestart() const;
         bool getVerbose() const;
         bool getWriteDelta() const;
+
     protected:
     private:
+        bool getLargerBorders() const; //not used atm
+
         static const int EXPECT_INPUT_FILE_PATH;
         static const int EXPECT_OUTPUT_FILE_PATH;
         static const std::string FLAG_RESTART;
@@ -25,9 +28,11 @@ class ProcessArgs
         static const std::string FLAG_VERBOSE;
         static const std::string FLAG_WRITE_DELTA;
         static const std::string FLAG_NOT_WRITE_DELTA;
+        static const std::string FLAG_LARGER_BORDERS;
         bool restart = false;
         bool verbose = false;
         bool writeDelta = true;
+        bool largerBorders = false;
         std::string inputFilePath = "input";
         std::string outputFilePath = "TBTKResults.h5";
 };

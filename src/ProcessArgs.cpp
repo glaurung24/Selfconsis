@@ -13,6 +13,7 @@ const string ProcessArgs::FLAG_INPUT_FILE_PATH = "-i";
 const string ProcessArgs::FLAG_OUTPUT_FILE_PATH = "-o";
 const string ProcessArgs::FLAG_VERBOSE = "-v";
 const string ProcessArgs::FLAG_NOT_WRITE_DELTA = "-nwd";
+const std::string ProcessArgs::FLAG_LARGER_BORDERS = "-lb";
 
 
 ProcessArgs::ProcessArgs(int argc, char **argv)
@@ -71,6 +72,10 @@ ProcessArgs::ProcessArgs(int argc, char **argv)
         {
             writeDelta = false;
         }
+        else if(input.compare(FLAG_LARGER_BORDERS) == 0)
+        {
+            largerBorders = true;
+        }
         else
         {
             cout << "error in ProcessArgs" << endl;
@@ -108,4 +113,9 @@ bool ProcessArgs::getVerbose() const
 bool ProcessArgs::getWriteDelta() const
 {
     return writeDelta;
+}
+
+bool ProcessArgs::getLargerBorders() const
+{
+    return largerBorders;
 }
