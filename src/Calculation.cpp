@@ -11,6 +11,7 @@
 #include <sstream>
 #include "FileParser.h"
 #include "FileReader.h"
+#include "EigenValues.h"
 
 
 using namespace std;
@@ -51,8 +52,11 @@ int Calculation::sCLoopCounter = 0;
 bool Calculation::sCLoop = true;
 unique_ptr<ParameterSet> Calculation::ps;
 
-unique_ptr<ChebyshevSolver> Calculation::cSolver;
-unique_ptr<CPropertyExtractor> Calculation::pe;
+unique_ptr<ChebyshevSolver> Calculation::cSolver = nullptr;
+unique_ptr<CPropertyExtractor> Calculation::cpe = nullptr;
+
+unique_ptr<DiagonalizationSolver> Calculation::dSolver = nullptr;
+unique_ptr<DPropertyExtractor> Calculation::dpe = nullptr;
 
 string Calculation::inputFileName;
 string Calculation::outputFileName;
@@ -107,8 +111,6 @@ void Calculation::Init()
     epsDelta = 0.05;
     numberSCRuns = 2;
 
-    cSolver = nullptr;
-    pe = nullptr;
 
     NUM_COEFFICIENTS = 1000;
     ENERGY_RESOLUTION = 2000;
@@ -236,8 +238,6 @@ void Calculation::Init(std::string input_file) //TODO
     epsDelta = ps->getDouble(EPSILON_DELTA_ID);
     numberSCRuns = ps->getInt(MAX_NR_SCL_RUNS_ID);
 
-    cSolver = nullptr;
-    pe = nullptr;
 
     NUM_COEFFICIENTS = ps->getInt(NR_CHEBYCHEV_COEFF_ID);
     ENERGY_RESOLUTION = ps->getInt(ENERGY_RESOLUTION_ID);
@@ -260,6 +260,11 @@ void Calculation::Init(std::string input_file) //TODO
 
     outputFileName = ps->getString(OUTPUT_FILE_PATH_ID);
     useGPU = ps->getBool(USE_GPU_ID);
+
+    if(ps->boolExists(USE_CHEBYCHEV_ID))
+    {
+        useChebyChev = ps->getBool(USE_CHEBYCHEV_ID);
+    }
 
     //TODO add if scloop here...
     FileWriter::setFileName(outputFileName);
@@ -308,8 +313,6 @@ void Calculation::InitRestart(string input_file)
     epsDelta = ps->getDouble(EPSILON_DELTA_ID);
     numberSCRuns = ps->getInt(MAX_NR_SCL_RUNS_ID);
 
-    cSolver = nullptr;
-    pe = nullptr;
 
     NUM_COEFFICIENTS = ps->getInt(NR_CHEBYCHEV_COEFF_ID);
     ENERGY_RESOLUTION = ps->getInt(ENERGY_RESOLUTION_ID);
@@ -332,7 +335,10 @@ void Calculation::InitRestart(string input_file)
     }
 
     useGPU = ps->getBool(USE_GPU_ID);
-
+    if(ps->boolExists(USE_CHEBYCHEV_ID))
+    {
+        useChebyChev = ps->getBool(USE_CHEBYCHEV_ID);
+    }
     readDelta(sCLoopCounter);
 }
 
@@ -450,15 +456,21 @@ void Calculation::ScLoop(bool writeEachDelta)
     {
         throw runtime_error("Calculation was not Initialised or model is not set up. Run Calculation::Init() and Calculation::SetUpModel() before running Calculation::ScLoop\n");
     }
-    if(!cSolver)
+    if(!cSolver && useChebyChev)
     {
         cSolver = unique_ptr<ChebyshevSolver>( new ChebyshevSolver());
         cSolver->setModel(&model);
         cSolver->setScaleFactor(SCALE_FACTOR);
     }
-    if(!pe)
+    if(!dSolver && useChebyChev) //TODO
     {
-        pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
+        dSolver = unique_ptr<DiagonalizationSolver>( new DiagonalizationSolver());
+        dSolver->setModel(&model);
+        dSolver->run();
+    }
+    if(!cpe && useChebyChev)
+    {
+        cpe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
                     NUM_COEFFICIENTS,
                     ENERGY_RESOLUTION,
                     useGPU,
@@ -466,6 +478,10 @@ void Calculation::ScLoop(bool writeEachDelta)
                     true,
                     -SCALE_FACTOR,
                     SCALE_FACTOR));
+    }
+    if(!dpe && !useChebyChev)
+    {
+        dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
     }
 
     if(writeEachDelta && !sCLoopCounter)
@@ -485,11 +501,8 @@ void Calculation::ScLoop(bool writeEachDelta)
 
     while(sCLoopCounter < numberSCRuns)
     {
-
-
-
         SwapDeltas();
-        if(useGPU)
+        if(useGPU && useChebyChev)
         {
             model.reconstructCOO();
         }
@@ -500,7 +513,18 @@ void Calculation::ScLoop(bool writeEachDelta)
         {
             for(int y=0; y < SIZE_Y; y++)
             {
-                deltaNew[x][y] = -pe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
+                if(useChebyChev)
+                {
+                    deltaNew[x][y] = -cpe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
+                }
+                else
+                {
+                    dSolver = unique_ptr<DiagonalizationSolver>( new DiagonalizationSolver());
+                    dSolver->setModel(&model);
+                    dSolver->run();
+                    dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
+                    deltaNew[x][y] = -dpe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
+                }
             }
         }
 
@@ -719,51 +743,56 @@ void Calculation::CalcLDOS()
     {
         throw runtime_error("Calculation was not Initialised or model is not set up. Run Calculation::Init() and Calculation::SetUpModel() before running Calculation::CalcLDOS\n");
     }
-    if(!cSolver)
+    if(!cSolver && useChebyChev)
     {
         cSolver = unique_ptr<ChebyshevSolver>( new ChebyshevSolver());
         cSolver->setModel(&model);
         cSolver->setScaleFactor(SCALE_FACTOR);
     }
+    if(!dSolver && !useChebyChev)
+    {
+        dSolver = unique_ptr<DiagonalizationSolver>( new DiagonalizationSolver());
+        dSolver->setModel(&model);
+        dSolver->run();
+    }
 
+    Property::LDOS *ldos = nullptr;
 
-//    if(!pe) //TODO
-//    {
-//        //Create PropertyExtractor. The parameter are in order: The
-//        //ChebyshevSolver, number of expansion coefficients used in the
-//        //Cebyshev expansion, energy resolution with which the Green's function
-//        // is evaluated, whether calculate expansion functions using a GPU or
-//        //not, whether to evaluate the Green's function using a GPU or not,
-//        //whether to use a lookup table for the Green's function or not
-//        //(required if the Green's function is evaluated on a GPU), and the
-//        //lower and upper bound between which the Green's function is evaluated
-//        //(has to be inside the interval [-SCALE_FACTOR, SCALE_FACTOR]).
-//        pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
-//                    NUM_COEFFICIENTS,
-//                    ENERGY_RESOLUTION,
-//                    useGPU,
-//                    false,
-//                    true,
-//                    -1,
-//                    1));
-//    }
+    const double ulim = 1;
+    const double llim = -1;
 
-    pe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
-                    NUM_COEFFICIENTS,
-                    ENERGY_RESOLUTION,
-                    useGPU,
-                    false,
-                    true,
-                    -1,
-                    1));
+    if(useChebyChev)
+    {
+        cpe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
+                        NUM_COEFFICIENTS,
+                        ENERGY_RESOLUTION,
+                        useGPU,
+                        false,
+                        true,
+                        llim,
+                        ulim));
 
-    //Extract local density of states and write to file
-    Property::LDOS *ldos = pe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
-                        {SIZE_X, 1, 4});
+        //Extract local density of states and write to file
+        ldos = cpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
+                            {SIZE_X, 1, 4});
 
-    //Set filename and remove any file already in the folder
+        //Set filename and remove any file already in the folder
 
-    FileWriter::writeLDOS(ldos, "LDOS");
+        FileWriter::writeLDOS(ldos, "LDOS");
+    }
+    else
+    {
+        if(!dpe)
+        {
+            dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
+        }
+//        ldos = dpe->calculateSpinPolarizedLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
+//                            {SIZE_X, 1, 4}, llim, ulim, ENERGY_RESOLUTION); //TODO
+        FileWriter::writeLDOS(ldos, "LDOS");
+        Property::EigenValues *ev = dpe->getEigenValues();
+        FileWriter::writeEigenValues(ev);
+        delete ev;
+    }
     delete ldos;
 }
 

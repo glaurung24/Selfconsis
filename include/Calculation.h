@@ -6,6 +6,8 @@
 #include "Model.h"
 #include "ChebyshevSolver.h"
 #include "CPropertyExtractor.h"
+#include "DiagonalizationSolver.h"
+#include "DPropertyExtractor.h"
 #include "Matrix.h"
 #include "ParameterSet.h"
 
@@ -85,7 +87,10 @@ class Calculation
         static bool largerBorders;
         static bool useChebyChev;
         static unique_ptr<ChebyshevSolver> cSolver;
-        static unique_ptr<CPropertyExtractor> pe;
+        static unique_ptr<DiagonalizationSolver> dSolver;
+        static unique_ptr<CPropertyExtractor> cpe;
+        static unique_ptr<DPropertyExtractor> dpe;
+
         static string inputFileName;
         static string outputFileName;
         static bool useGPU;

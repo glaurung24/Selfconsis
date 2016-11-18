@@ -14,7 +14,7 @@
 #include "Model.h"
 #include "Timer.h"
 #include <sstream>
-//#include "H5Cpp.h" //TODO
+#include "H5Cpp.h" //TODO
 #include <iomanip>
 #include <ctime>
 
