@@ -77,7 +77,7 @@ class Calculation
         static bool modelSetUp;
         static bool sCLoop;
         static int sCLoopCounter;
-        static unique_ptr<Util::ParameterSet> ps;
+        static unique_ptr<ParameterSet> ps;
 
         static int numberSCRuns;
         static double epsDelta;

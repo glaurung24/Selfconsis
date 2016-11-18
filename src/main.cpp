@@ -12,9 +12,9 @@
 #include <iostream>
 #include <memory>
 #include "Model.h"
-#include "Util.h"
+#include "Timer.h"
 #include <sstream>
-#include "H5Cpp.h" //TODO
+//#include "H5Cpp.h" //TODO
 #include <iomanip>
 #include <ctime>
 
@@ -31,13 +31,13 @@ int main(int argc, char **argv){
 //    stringstream ss;
 //    ss << "TBTKLog" << put_time(localtime(&t), "%d-%m-%Y_%H-%M-%S");
 //    Util::Streams::openLog(ss.str());
-    Util::Streams::openLog();
+    Streams::openLog();
 
 
     ofstream logFile("TBTKLog", fstream::out | fstream::app);
     time_t t = time(NULL);
     logFile << "\n\n###" << put_time(localtime(&t), "%d-%m-%Y_%H-%M-%S") << "\n\n";
-    Util::Streams::log.rdbuf(logFile.rdbuf());
+    Streams::log.rdbuf(logFile.rdbuf());
 
     ProcessArgs args(argc, argv);
 

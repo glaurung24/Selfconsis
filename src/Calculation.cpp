@@ -7,7 +7,7 @@
 #include "CPropertyExtractor.h"
 #include "FileWriter.h"
 #include "LDOS.h"
-#include "Util.h"
+#include "Timer.h"
 #include <sstream>
 #include "FileParser.h"
 #include "FileReader.h"
@@ -49,7 +49,7 @@ bool Calculation::useChebyChev = true;
 bool Calculation::useGPU;
 int Calculation::sCLoopCounter = 0;
 bool Calculation::sCLoop = true;
-unique_ptr<Util::ParameterSet> Calculation::ps;
+unique_ptr<ParameterSet> Calculation::ps;
 
 unique_ptr<ChebyshevSolver> Calculation::cSolver;
 unique_ptr<CPropertyExtractor> Calculation::pe;
@@ -198,7 +198,7 @@ void Calculation::Delete()
 void Calculation::Init(std::string input_file) //TODO
 {
     inputFileName = input_file;
-    ps = unique_ptr<Util::ParameterSet>(FileParser::readParameterSet(inputFileName));
+    ps = unique_ptr<ParameterSet>(FileParser::readParameterSet(inputFileName));
      //Zeeman coupling
 //    counter_z = ps->getInt("counter_z");
     checkInit = true;
@@ -271,11 +271,11 @@ void Calculation::Init(std::string input_file) //TODO
 void Calculation::InitRestart(string input_file)
 {
     inputFileName = input_file;
-    unique_ptr<Util::ParameterSet> psInput = unique_ptr<Util::ParameterSet>(FileParser::readParameterSet(inputFileName));
+    unique_ptr<ParameterSet> psInput = unique_ptr<ParameterSet>(FileParser::readParameterSet(inputFileName));
     outputFileName = psInput->getString(OUTPUT_FILE_PATH_ID);
     FileWriter::setFileName(outputFileName);
     FileReader::setFileName(outputFileName);
-    ps = unique_ptr<Util::ParameterSet>(FileReader::readParameterSet());
+    ps = unique_ptr<ParameterSet>(FileReader::readParameterSet());
     checkInit = true;
     if(ps->boolExists(LARGER_BORDERS_ID))
     {
