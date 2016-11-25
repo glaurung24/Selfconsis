@@ -266,6 +266,8 @@ void Calculation::Init(std::string input_file) //TODO
         useChebyChev = ps->getBool(USE_CHEBYCHEV_ID);
     }
 
+    cout << useChebyChev << endl;
+
     //TODO add if scloop here...
     FileWriter::setFileName(outputFileName);
     FileReader::setFileName(outputFileName);
@@ -456,19 +458,19 @@ void Calculation::ScLoop(bool writeEachDelta)
     {
         throw runtime_error("Calculation was not Initialised or model is not set up. Run Calculation::Init() and Calculation::SetUpModel() before running Calculation::ScLoop\n");
     }
-    if(!cSolver && useChebyChev)
+    if(!cSolver & useChebyChev)
     {
         cSolver = unique_ptr<ChebyshevSolver>( new ChebyshevSolver());
         cSolver->setModel(&model);
         cSolver->setScaleFactor(SCALE_FACTOR);
     }
-    if(!dSolver && useChebyChev) //TODO
+    if(!dSolver & !useChebyChev) //TODO
     {
         dSolver = unique_ptr<DiagonalizationSolver>( new DiagonalizationSolver());
         dSolver->setModel(&model);
         dSolver->run();
     }
-    if(!cpe && useChebyChev)
+    if(!cpe & useChebyChev)
     {
         cpe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
                     NUM_COEFFICIENTS,
@@ -479,12 +481,12 @@ void Calculation::ScLoop(bool writeEachDelta)
                     -SCALE_FACTOR,
                     SCALE_FACTOR));
     }
-    if(!dpe && !useChebyChev)
+    if(!dpe & !useChebyChev)
     {
         dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
     }
 
-    if(writeEachDelta && !sCLoopCounter)
+    if(writeEachDelta & !sCLoopCounter)
     {
         WriteDelta(sCLoopCounter, -1);
         //TODO write sc loop number to file
@@ -502,7 +504,14 @@ void Calculation::ScLoop(bool writeEachDelta)
     while(sCLoopCounter < numberSCRuns)
     {
         SwapDeltas();
-        if(useGPU && useChebyChev)
+        if(!useChebyChev)
+        {
+            dSolver = unique_ptr<DiagonalizationSolver>( new DiagonalizationSolver());
+            dSolver->setModel(&model);
+            dSolver->run();
+            dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
+        }
+        if(useGPU & useChebyChev)
         {
             model.reconstructCOO();
         }
@@ -519,10 +528,6 @@ void Calculation::ScLoop(bool writeEachDelta)
                 }
                 else
                 {
-                    dSolver = unique_ptr<DiagonalizationSolver>( new DiagonalizationSolver());
-                    dSolver->setModel(&model);
-                    dSolver->run();
-                    dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
                     deltaNew[x][y] = -dpe->calculateExpectationValue({x,y,3},{x,y,0})*couplingPotential;
                 }
             }
@@ -743,13 +748,13 @@ void Calculation::CalcLDOS()
     {
         throw runtime_error("Calculation was not Initialised or model is not set up. Run Calculation::Init() and Calculation::SetUpModel() before running Calculation::CalcLDOS\n");
     }
-    if(!cSolver && useChebyChev)
+    if(!cSolver & useChebyChev)
     {
         cSolver = unique_ptr<ChebyshevSolver>( new ChebyshevSolver());
         cSolver->setModel(&model);
         cSolver->setScaleFactor(SCALE_FACTOR);
     }
-    if(!dSolver && !useChebyChev)
+    if(!dSolver & !useChebyChev)
     {
         dSolver = unique_ptr<DiagonalizationSolver>( new DiagonalizationSolver());
         dSolver->setModel(&model);
@@ -775,10 +780,6 @@ void Calculation::CalcLDOS()
         //Extract local density of states and write to file
         ldos = cpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
                             {SIZE_X, 1, 4});
-
-        //Set filename and remove any file already in the folder
-
-        FileWriter::writeLDOS(ldos, "LDOS");
     }
     else
     {
@@ -786,13 +787,13 @@ void Calculation::CalcLDOS()
         {
             dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
         }
-//        ldos = dpe->calculateSpinPolarizedLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
-//                            {SIZE_X, 1, 4}, llim, ulim, ENERGY_RESOLUTION); //TODO
-        FileWriter::writeLDOS(ldos, "LDOS");
+        ldos = dpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
+                            {SIZE_X, 1, 4}, llim, ulim, ENERGY_RESOLUTION);
         Property::EigenValues *ev = dpe->getEigenValues();
         FileWriter::writeEigenValues(ev);
         delete ev;
     }
+    FileWriter::writeLDOS(ldos, "LDOS");
     delete ldos;
 }
 
