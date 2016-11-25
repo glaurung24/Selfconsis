@@ -474,12 +474,12 @@ void Calculation::ScLoop(bool writeEachDelta)
     {
         cpe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
                     NUM_COEFFICIENTS,
-                    ENERGY_RESOLUTION,
+                    ENERGY_RESOLUTION/2+1,
                     useGPU,
                     false,
                     true,
                     -SCALE_FACTOR,
-                    SCALE_FACTOR));
+                    0+2*SCALE_FACTOR/ENERGY_RESOLUTION));
     }
     if(!dpe & !useChebyChev)
     {
@@ -770,7 +770,7 @@ void Calculation::CalcLDOS()
     {
         cpe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
                         NUM_COEFFICIENTS,
-                        ENERGY_RESOLUTION,
+                        ENERGY_RESOLUTION*(ulim-llim)/(2*SCALE_FACTOR),
                         useGPU,
                         false,
                         true,
@@ -788,7 +788,7 @@ void Calculation::CalcLDOS()
             dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
         }
         ldos = dpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
-                            {SIZE_X, 1, 4}, llim, ulim, ENERGY_RESOLUTION);
+                            {SIZE_X, 1, 4}, llim, ulim, ENERGY_RESOLUTION*(ulim-llim)/(2*SCALE_FACTOR));
         Property::EigenValues *ev = dpe->getEigenValues();
         FileWriter::writeEigenValues(ev);
         delete ev;
