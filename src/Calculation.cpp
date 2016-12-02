@@ -50,6 +50,7 @@ bool Calculation::useChebyChev = true;
 bool Calculation::useGPU;
 int Calculation::sCLoopCounter = 0;
 bool Calculation::sCLoop = true;
+bool Calculation::printLDOSNoSc = true;
 unique_ptr<ParameterSet> Calculation::ps;
 
 unique_ptr<ChebyshevSolver> Calculation::cSolver = nullptr;
@@ -501,6 +502,11 @@ void Calculation::ScLoop(bool writeEachDelta)
         return;
     }
 
+    if(printLDOSNoSc & sCLoop)
+    {
+        CalcLDOS("LDOSNoSc", "EigenValuesNoSc");
+    }
+
     while(sCLoopCounter < numberSCRuns)
     {
         SwapDeltas();
@@ -742,7 +748,7 @@ Matrix<double> Calculation::ConvertVectorToMatrix(const double *input, int sizeX
     return out;
 }
 
-void Calculation::CalcLDOS()
+void Calculation::CalcLDOS(string datasetNameLDOS, string datasetNameEigenValues)
 {
     if(!checkInit  & !modelSetUp)
     {
@@ -790,10 +796,10 @@ void Calculation::CalcLDOS()
         ldos = dpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
                             {SIZE_X, 1, 4}, llim, ulim, ENERGY_RESOLUTION*(ulim-llim)/(2*SCALE_FACTOR));
         Property::EigenValues *ev = dpe->getEigenValues();
-        FileWriter::writeEigenValues(ev);
+        FileWriter::writeEigenValues(ev, datasetNameEigenValues);
         delete ev;
     }
-    FileWriter::writeLDOS(ldos, "LDOS");
+    FileWriter::writeLDOS(ldos, datasetNameLDOS);
     delete ldos;
 }
 
@@ -807,3 +813,7 @@ void Calculation::setLargerBorders(bool input)
     largerBorders = input;
 }
 
+void Calculation::setPrintLDOSNoSc(bool input)
+{
+    printLDOSNoSc=input;
+}

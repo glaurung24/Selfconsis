@@ -26,9 +26,10 @@ class Calculation
         static void SetUpModel();
         static void ScLoop(bool writeEachDelta = false);
         static void Delete();
-        static void CalcLDOS();
+        static void CalcLDOS(string datasetName="LDOS", string datasetNameEigenValues="EigenValues");
         static void setVerbose(bool);
         static void setLargerBorders(bool);
+        static void setPrintLDOSNoSc(bool);
 
 
     protected:
@@ -86,6 +87,7 @@ class Calculation
         static bool verbose;
         static bool largerBorders;
         static bool useChebyChev;
+        static bool printLDOSNoSc;
         static unique_ptr<ChebyshevSolver> cSolver;
         static unique_ptr<DiagonalizationSolver> dSolver;
         static unique_ptr<CPropertyExtractor> cpe;
