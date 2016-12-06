@@ -31,13 +31,13 @@ int main(int argc, char **argv){
 //    stringstream ss;
 //    ss << "TBTKLog" << put_time(localtime(&t), "%d-%m-%Y_%H-%M-%S");
 //    Util::Streams::openLog(ss.str());
-    Streams::openLog();
+//    Streams::openLog();
 
 
-    ofstream logFile("TBTKLog", fstream::out | fstream::app);
-    time_t t = time(NULL);
-    logFile << "\n\n###" << put_time(localtime(&t), "%d-%m-%Y_%H-%M-%S") << "\n\n";
-    Streams::log.rdbuf(logFile.rdbuf());
+//    ofstream logFile("TBTKLog", fstream::out | fstream::app);
+//    time_t t = time(NULL);
+//    logFile << "\n\n###" << put_time(localtime(&t), "%d-%m-%Y_%H-%M-%S") << "\n\n";
+//    Streams::log.rdbuf(logFile.rdbuf());
 
     ProcessArgs args(argc, argv);
 
@@ -56,7 +56,7 @@ int main(int argc, char **argv){
     Calculation::ScLoop(writeDelta);
     Calculation::CalcLDOS();
 
-    logFile.close(); //TODO
+//    logFile.close(); //TODO
 	return 0;
 }
 
