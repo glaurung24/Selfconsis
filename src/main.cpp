@@ -12,11 +12,11 @@
 #include <iostream>
 #include <memory>
 #include "Model.h"
-#include "Timer.h"
+//#include "Timer.h"
 #include <sstream>
 #include "H5Cpp.h" //TODO
-#include <iomanip>
-#include <ctime>
+//#include <iomanip>
+//#include <ctime>
 
 #include "Calculation.h"
 #include "ProcessArgs.h"
