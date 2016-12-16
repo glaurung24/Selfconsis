@@ -267,8 +267,6 @@ void Calculation::Init(std::string input_file) //TODO
         useChebyChev = ps->getBool(USE_CHEBYCHEV_ID);
     }
 
-    cout << useChebyChev << endl;
-
     //TODO add if scloop here...
     FileWriter::setFileName(outputFileName);
     FileReader::setFileName(outputFileName);
@@ -471,7 +469,11 @@ void Calculation::ScLoop(bool writeEachDelta)
         dSolver->setModel(&model);
         dSolver->run();
     }
-    if(!cpe & useChebyChev)
+    if(printLDOSNoSc & sCLoop)
+    {
+        CalcLDOS("LDOSNoSc", "EigenValuesNoSc");
+    }
+    if(useChebyChev)
     {
         cpe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
                     NUM_COEFFICIENTS,
@@ -482,7 +484,8 @@ void Calculation::ScLoop(bool writeEachDelta)
                     -SCALE_FACTOR,
                     0+2*SCALE_FACTOR/ENERGY_RESOLUTION));
     }
-    if(!dpe & !useChebyChev)
+
+    if(!useChebyChev)
     {
         dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
     }
@@ -502,10 +505,7 @@ void Calculation::ScLoop(bool writeEachDelta)
         return;
     }
 
-    if(printLDOSNoSc & sCLoop)
-    {
-        CalcLDOS("LDOSNoSc", "EigenValuesNoSc");
-    }
+
 
     while(sCLoopCounter < numberSCRuns)
     {
