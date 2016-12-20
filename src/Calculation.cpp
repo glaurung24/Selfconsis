@@ -358,6 +358,7 @@ void Calculation::InitRestart(string input_file)
         useChebyChev = ps->getBool(USE_CHEBYCHEV_ID);
     }
     readDelta(sCLoopCounter);
+    printLDOSNoSc = false;
 }
 
 Calculation::~Calculation()
