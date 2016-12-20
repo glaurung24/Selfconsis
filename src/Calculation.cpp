@@ -88,6 +88,7 @@ const string Calculation::EPS_DELTA_ID = "EpsDelta";
 const string Calculation::IS_MAGNETIZED_ID = "IsMagnetized";
 const string Calculation::LARGER_BORDERS_ID = "DoubleBorders";
 const string Calculation::USE_CHEBYCHEV_ID = "UseChebyChev";
+const string Calculation::DELTA_START_FILE_ID = "DeltaStartFile";
 
 void Calculation::Init()
 {
@@ -154,6 +155,13 @@ void Calculation::InitDelta(int nr_sc_loop)
         deltaOld.push_back( row );
     }
     readDelta(nr_sc_loop);
+}
+
+void Calculation::InitDelta(string file_name)
+{
+    deltaNew.reserve(SIZE_X);
+    deltaOld.reserve(SIZE_X);
+
 }
 
 void Calculation::InitIsMagnetized(bool magnetized)
@@ -231,7 +239,15 @@ void Calculation::Init(std::string input_file) //TODO
     couplingPotential = ps->getComplex(COUPLING_POT_ID);
     periodicBoundCond = ps->getBool(PERIODIC_BOUND_ID);
 
-    InitDelta();
+    if(ps->stringExists(DELTA_START_FILE_ID))
+    {
+        FileReader::setFileName(ps->getString(DeltaStartFile));
+        readDelta(0); //TODO find out sc_loop_nr from last run
+    }
+    else
+    {
+        InitDelta();
+    }
     InitIsMagnetized(ps->getBool(IS_MAGNETIZED_ID));
 
 
@@ -266,6 +282,7 @@ void Calculation::Init(std::string input_file) //TODO
     {
         useChebyChev = ps->getBool(USE_CHEBYCHEV_ID);
     }
+
 
     //TODO add if scloop here...
     FileWriter::setFileName(outputFileName);
@@ -451,7 +468,7 @@ complex<double> Calculation::FuncDelta(Index to, Index from)
 //    int to_s = to.at(2);
 }
 
-void Calculation::ScLoop(bool writeEachDelta)
+void Calculation::ScLoop(bool writeEachDelta) //TODO funktion aufraumen
 {
     if(!checkInit  & !modelSetUp)
     {

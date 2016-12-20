@@ -122,6 +122,7 @@ class Calculation
         static const string IS_MAGNETIZED_ID;
         static const string LARGER_BORDERS_ID;
         static const string USE_CHEBYCHEV_ID;
+        static const string DELTA_START_FILE_ID;
 };
 
 #endif // CALCULATION_H
