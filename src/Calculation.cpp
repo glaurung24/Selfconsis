@@ -14,6 +14,17 @@
 #include "EigenValues.h"
 
 
+#include "FileReader.h"
+#include "TBTKMacros.h"
+#include "Streams.h"
+
+#include <H5Cpp.h>
+#include <fstream>
+
+#ifndef H5_NO_NAMESPACE
+	using namespace H5;
+#endif
+
 using namespace std;
 using namespace TBTK;
 
@@ -89,6 +100,8 @@ const string Calculation::IS_MAGNETIZED_ID = "IsMagnetized";
 const string Calculation::LARGER_BORDERS_ID = "DoubleBorders";
 const string Calculation::USE_CHEBYCHEV_ID = "UseChebyChev";
 const string Calculation::DELTA_START_FILE_ID = "DeltaStartFile";
+const string Calculation::SC_LOOP_NR_HDF5_ID = "SCLoopNr";
+const string Calculation::SC_LOOP_NR_HDF5_ATTR_ID = "SCLoopNrAttr";
 
 void Calculation::Init()
 {
@@ -155,13 +168,6 @@ void Calculation::InitDelta(int nr_sc_loop)
         deltaOld.push_back( row );
     }
     readDelta(nr_sc_loop);
-}
-
-void Calculation::InitDelta(string file_name)
-{
-    deltaNew.reserve(SIZE_X);
-    deltaOld.reserve(SIZE_X);
-
 }
 
 void Calculation::InitIsMagnetized(bool magnetized)
@@ -239,10 +245,29 @@ void Calculation::Init(std::string input_file) //TODO
     couplingPotential = ps->getComplex(COUPLING_POT_ID);
     periodicBoundCond = ps->getBool(PERIODIC_BOUND_ID);
 
+
+
     if(ps->stringExists(DELTA_START_FILE_ID))
     {
-        FileReader::setFileName(ps->getString(DeltaStartFile));
-        readDelta(0); //TODO find out sc_loop_nr from last run
+        FileReader::setFileName(ps->getString(DELTA_START_FILE_ID));
+        FileReader::readParameterSet();
+        int num_sc_loops;
+        string tmp = SC_LOOP_NR_HDF5_ATTR_ID;
+//
+//
+//        		Exception::dontPrint();
+//		H5File file(ps->getString(DELTA_START_FILE_ID), H5F_ACC_RDONLY);
+//
+//		DataSet dataset = file.openDataSet(SC_LOOP_NR_HDF5_ID);
+//		DataSpace dataspace = dataset.getSpace();
+//
+//
+//        Attribute attribute = dataset.openAttribute(tmp);
+//        attribute.read(PredType::NATIVE_INT, &num_sc_loops);
+//
+//
+        FileReader::readAttributes(&num_sc_loops, &tmp, 1, SC_LOOP_NR_HDF5_ID);
+        InitDelta(num_sc_loops);
     }
     else
     {
@@ -274,16 +299,13 @@ void Calculation::Init(std::string input_file) //TODO
         ps->addInt(SC_LOOP_NR_ID, sCLoopCounter);
     }
 
-
-    outputFileName = ps->getString(OUTPUT_FILE_PATH_ID);
     useGPU = ps->getBool(USE_GPU_ID);
-
     if(ps->boolExists(USE_CHEBYCHEV_ID))
     {
         useChebyChev = ps->getBool(USE_CHEBYCHEV_ID);
     }
 
-
+    outputFileName = ps->getString(OUTPUT_FILE_PATH_ID);
     //TODO add if scloop here...
     FileWriter::setFileName(outputFileName);
     FileReader::setFileName(outputFileName);
@@ -632,6 +654,7 @@ void Calculation::readDelta(int nr_sc_loop)
 {
     stringstream loopFileNameReal;
     stringstream loopFileNameImag;
+
 //    stringstream loopFileNameArg;
     if(nr_sc_loop < 10)
     {
@@ -819,6 +842,11 @@ void Calculation::CalcLDOS(string datasetNameLDOS, string datasetNameEigenValues
     }
     FileWriter::writeLDOS(ldos, datasetNameLDOS);
     delete ldos;
+}
+
+void Calculation::writeScLoopNr()
+{
+    FileWriter::writeAttributes(&sCLoopCounter, &SC_LOOP_NR_HDF5_ATTR_ID, 1, SC_LOOP_NR_HDF5_ID);
 }
 
 void Calculation::setVerbose(bool input)

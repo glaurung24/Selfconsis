@@ -55,6 +55,7 @@ int main(int argc, char **argv){
     Calculation::SetUpModel();
     Calculation::ScLoop(writeDelta);
     Calculation::CalcLDOS();
+    Calculation::writeScLoopNr();
 
 //    logFile.close(); //TODO
 	return 0;

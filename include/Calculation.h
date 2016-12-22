@@ -30,6 +30,7 @@ class Calculation
         static void setVerbose(bool);
         static void setLargerBorders(bool);
         static void setPrintLDOSNoSc(bool);
+        static void writeScLoopNr();
 
 
     protected:
@@ -123,6 +124,8 @@ class Calculation
         static const string LARGER_BORDERS_ID;
         static const string USE_CHEBYCHEV_ID;
         static const string DELTA_START_FILE_ID;
+        static const string SC_LOOP_NR_HDF5_ID;
+	static const string SC_LOOP_NR_HDF5_ATTR_ID;
 };
 
 #endif // CALCULATION_H
