@@ -56,7 +56,7 @@ bool Calculation::modelSetUp = false;
 int Calculation::numberSCRuns;
 double Calculation::epsDelta;
 bool Calculation::verbose;
-bool Calculation::largerBorders = false;
+double Calculation::largerBorders = 1.0;
 bool Calculation::useChebyChev = true;
 bool Calculation::useGPU;
 int Calculation::sCLoopCounter = 0;
@@ -97,7 +97,7 @@ const string Calculation::INIT_DELTA_IMAG_ID = "DeltaImag";
 const string Calculation::DELTA_LOOP_IMAG_ID = "DeltaLoopImag";
 const string Calculation::EPS_DELTA_ID = "EpsDelta";
 const string Calculation::IS_MAGNETIZED_ID = "IsMagnetized";
-const string Calculation::LARGER_BORDERS_ID = "DoubleBorders";
+const string Calculation::LARGER_BORDERS_ID = "LargerBorders";
 const string Calculation::USE_CHEBYCHEV_ID = "UseChebyChev";
 const string Calculation::DELTA_START_FILE_ID = "DeltaStartFile";
 const string Calculation::SC_LOOP_NR_HDF5_ID = "SCLoopNr";
@@ -219,15 +219,17 @@ void Calculation::Init(std::string input_file) //TODO
      //Zeeman coupling
 //    counter_z = ps->getInt("counter_z");
     checkInit = true;
-    if(ps->boolExists(LARGER_BORDERS_ID))
+    bool change_borders = false;
+    if(ps->doubleExists(LARGER_BORDERS_ID))
     {
-        largerBorders = ps->getBool(LARGER_BORDERS_ID);
+        largerBorders = ps->getDouble(LARGER_BORDERS_ID);
+        change_borders = true;
     }
     N = ps->getInt(SIZE_N_ID);
-    if(largerBorders)
+    if(change_borders)
     {
-        SIZE_X = 6*N;
-        SIZE_Y = 4*N+1;
+        SIZE_X = 2*N+int(2*N*largerBorders);
+        SIZE_Y = int(2*N*largerBorders)+1;
     }
     else
     {
@@ -253,19 +255,6 @@ void Calculation::Init(std::string input_file) //TODO
         FileReader::readParameterSet();
         int num_sc_loops;
         string tmp = SC_LOOP_NR_HDF5_ATTR_ID;
-//
-//
-//        		Exception::dontPrint();
-//		H5File file(ps->getString(DELTA_START_FILE_ID), H5F_ACC_RDONLY);
-//
-//		DataSet dataset = file.openDataSet(SC_LOOP_NR_HDF5_ID);
-//		DataSpace dataspace = dataset.getSpace();
-//
-//
-//        Attribute attribute = dataset.openAttribute(tmp);
-//        attribute.read(PredType::NATIVE_INT, &num_sc_loops);
-//
-//
         FileReader::readAttributes(&num_sc_loops, &tmp, 1, SC_LOOP_NR_HDF5_ID);
         InitDelta(num_sc_loops);
     }

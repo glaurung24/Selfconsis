@@ -86,7 +86,7 @@ class Calculation
         static int numberSCRuns;
         static double epsDelta;
         static bool verbose;
-        static bool largerBorders;
+        static double largerBorders;
         static bool useChebyChev;
         static bool printLDOSNoSc;
         static unique_ptr<ChebyshevSolver> cSolver;
