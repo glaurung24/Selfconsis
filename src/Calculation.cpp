@@ -216,7 +216,7 @@ void Calculation::Init(std::string input_file) //TODO
 {
     inputFileName = input_file;
     ps = unique_ptr<ParameterSet>(FileParser::readParameterSet(inputFileName));
-     //Zeeman coupling
+    //Zeeman coupling
 //    counter_z = ps->getInt("counter_z");
     checkInit = true;
     bool change_borders = false;
@@ -256,6 +256,7 @@ void Calculation::Init(std::string input_file) //TODO
         int num_sc_loops;
         string tmp = SC_LOOP_NR_HDF5_ATTR_ID;
         FileReader::readAttributes(&num_sc_loops, &tmp, 1, SC_LOOP_NR_HDF5_ID);
+        cout << "Using iteration Nr. " << num_sc_loops << " from file " << ps->getString(DELTA_START_FILE_ID) << " as starting point." << endl;
         InitDelta(num_sc_loops);
     }
     else
@@ -474,7 +475,8 @@ complex<double> Calculation::FuncDelta(Index to, Index from)
         throw runtime_error("Something went wrong in Calculation::FuncDelta");
     }
 
-    return deltaNew[from_x][from_y]*2.0*(0.5-from_s);
+    cout << "Something went wrong in Calculation::FuncDelta, (after switch)" << endl;
+//    return deltaNew[from_x][from_y]*2.0*(0.5-from_s);
 //    int to_x = to.at(0);
 //    int to_y = to.at(1);
 //    int to_s = to.at(2);
@@ -673,6 +675,7 @@ void Calculation::readDelta(int nr_sc_loop)
         for(unsigned int j=0; j < deltaNew[i].size(); j++)
         {
             deltaNew[i][j] = realPart[i][j] + i*imagPart[i][j];//TODO complex constructor calling with argument and absolute value
+            deltaOld[i][j] = realPart[i][j] + i*imagPart[i][j];
         }
     }
     delete [] dims;
@@ -835,7 +838,8 @@ void Calculation::CalcLDOS(string datasetNameLDOS, string datasetNameEigenValues
 
 void Calculation::writeScLoopNr()
 {
-    FileWriter::writeAttributes(&sCLoopCounter, &SC_LOOP_NR_HDF5_ATTR_ID, 1, SC_LOOP_NR_HDF5_ID);
+    int loopNr = sCLoopCounter + 1;
+    FileWriter::writeAttributes(&loopNr, &SC_LOOP_NR_HDF5_ATTR_ID, 1, SC_LOOP_NR_HDF5_ID);
 }
 
 void Calculation::setVerbose(bool input)
