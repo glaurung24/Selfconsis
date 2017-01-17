@@ -20,7 +20,7 @@ const complex<double> i(0, 1);
 class Calculation
 {
     public:
-        static void Init();
+//        static void Init();
         static void Init(string);
         static void InitRestart(string);
         static void SetUpModel();
@@ -42,7 +42,7 @@ class Calculation
         static void InitDelta();
         static void InitDelta(int);
         static complex<double> FuncDelta(Index, Index);
-        static vector<complex<double>> ConvertMatrixToVector(const Matrix<complex<double>>&);
+        static vector<complex<double>> ConvertMatrixToVector(complex<double>**);
         static Matrix<double> ConvertVectorToMatrix(const double *, int , int );
 //        static complex<double>** Convert1DVectorTo2DArray(vector<complex<double>> const, int, int);
         static vector<double> GetRealVec(vector<complex<double>>);
@@ -75,8 +75,8 @@ class Calculation
         static int NUM_COEFFICIENTS;
         static int ENERGY_RESOLUTION;
         static double SCALE_FACTOR;
-        static Matrix<complex<double>> deltaNew;
-        static Matrix<complex<double>>  deltaOld;
+        static complex<double>** deltaNew;
+        static complex<double>**  deltaOld;
         static bool checkInit;
         static bool modelSetUp;
         static bool sCLoop;
@@ -125,7 +125,7 @@ class Calculation
         static const string USE_CHEBYCHEV_ID;
         static const string DELTA_START_FILE_ID;
         static const string SC_LOOP_NR_HDF5_ID;
-	static const string SC_LOOP_NR_HDF5_ATTR_ID;
+        static const string SC_LOOP_NR_HDF5_ATTR_ID;
 };
 
 #endif // CALCULATION_H

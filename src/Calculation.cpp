@@ -49,8 +49,8 @@ Model Calculation::model;
 int Calculation::NUM_COEFFICIENTS;
 int Calculation::ENERGY_RESOLUTION;
 double Calculation::SCALE_FACTOR;
-Matrix<complex<double>> Calculation::deltaNew;
-Matrix<complex<double>> Calculation::deltaOld;
+complex<double>** Calculation::deltaNew = nullptr;
+complex<double>** Calculation::deltaOld = nullptr;
 bool Calculation::checkInit = false;
 bool Calculation::modelSetUp = false;
 int Calculation::numberSCRuns;
@@ -103,69 +103,77 @@ const string Calculation::DELTA_START_FILE_ID = "DeltaStartFile";
 const string Calculation::SC_LOOP_NR_HDF5_ID = "SCLoopNr";
 const string Calculation::SC_LOOP_NR_HDF5_ATTR_ID = "SCLoopNrAttr";
 
-void Calculation::Init()
-{
-    checkInit = true;
-    N = 2;
-    SIZE_X = 4*N;
-    SIZE_Y = 2*N+1;
-    SPIN_D = 4;
-
-    mu = -4.0;
-    t = 1.0;
-    z = 0.5; //Zeeman coupling 0.5
-
-    deltaStart = 0.3;
-    alpha = 0.3;
-    couplingPotential = 5;
-    periodicBoundCond = false;
-
-    InitDelta();
-    InitIsMagnetized(true);
-
-    epsDelta = 0.05;
-    numberSCRuns = 2;
-
-
-    NUM_COEFFICIENTS = 1000;
-    ENERGY_RESOLUTION = 2000;
-    SCALE_FACTOR = 10.;
-    sCLoopCounter = 0;
-
-    outputFileName = "TBTKResults.h5";
-    useGPU = false;
-
-
-    FileWriter::setFileName(outputFileName);
-    FileWriter::clear();
-
-}
+//void Calculation::Init()
+//{
+//    checkInit = true;
+//    N = 2;
+//    SIZE_X = 4*N;
+//    SIZE_Y = 2*N+1;
+//    SPIN_D = 4;
+//
+//    mu = -4.0;
+//    t = 1.0;
+//    z = 0.5; //Zeeman coupling 0.5
+//
+//    deltaStart = 0.3;
+//    alpha = 0.3;
+//    couplingPotential = 5;
+//    periodicBoundCond = false;
+//
+//    InitDelta();
+//    InitIsMagnetized(true);
+//
+//    epsDelta = 0.05;
+//    numberSCRuns = 2;
+//
+//
+//    NUM_COEFFICIENTS = 1000;
+//    ENERGY_RESOLUTION = 2000;
+//    SCALE_FACTOR = 10.;
+//    sCLoopCounter = 0;
+//
+//    outputFileName = "TBTKResults.h5";
+//    useGPU = false;
+//
+//
+//    FileWriter::setFileName(outputFileName);
+//    FileWriter::clear();
+//
+//}
 
 void Calculation::InitDelta()
 {
-    deltaNew.reserve(SIZE_X);
-    deltaOld.reserve(SIZE_X);
+    deltaNew = new complex<double>*[SIZE_X];
+    deltaOld = new complex<double>*[SIZE_X];
 
 
     for(int i =0; i < SIZE_X; i++)
     {
-        vector<complex<double>> row(SIZE_Y, deltaStart);
-        deltaNew.push_back( row );
-        deltaOld.push_back( row );
+        deltaNew[i] = new complex<double>[SIZE_Y];
+        deltaOld[i] = new complex<double>[SIZE_Y];
+        for(int j = 0; j < SIZE_Y; j++)
+        {
+            deltaNew[i][j] = deltaStart;
+            deltaOld[i][j] = deltaStart;
+        }
     }
 }
 
 void Calculation::InitDelta(int nr_sc_loop)
 {
-    deltaNew.reserve(SIZE_X);
-    deltaOld.reserve(SIZE_X);
+    deltaNew = new complex<double>*[SIZE_X];
+    deltaOld = new complex<double>*[SIZE_X];
 
 
     for(int i =0; i < SIZE_X; i++)
     {
-        vector<complex<double>> row(SIZE_Y, deltaStart);
-        deltaNew.push_back( row );
-        deltaOld.push_back( row );
+        deltaNew[i] = new complex<double>[SIZE_Y];
+        deltaOld[i] = new complex<double>[SIZE_Y];
+        for(int j = 0; j < SIZE_Y; j++)
+        {
+            deltaNew[i][j] = deltaStart;
+            deltaOld[i][j] = deltaStart;
+        }
     }
     readDelta(nr_sc_loop);
 }
@@ -312,15 +320,17 @@ void Calculation::InitRestart(string input_file)
     FileReader::setFileName(outputFileName);
     ps = unique_ptr<ParameterSet>(FileReader::readParameterSet());
     checkInit = true;
-    if(ps->boolExists(LARGER_BORDERS_ID))
+    bool change_borders = false;
+    if(ps->doubleExists(LARGER_BORDERS_ID))
     {
-        largerBorders = ps->getBool(LARGER_BORDERS_ID);
+        largerBorders = ps->getDouble(LARGER_BORDERS_ID);
+        change_borders = true;
     }
     N = ps->getInt(SIZE_N_ID);
-    if(largerBorders)
+    if(change_borders)
     {
-        SIZE_X = 6*N;
-        SIZE_Y = 4*N+1;
+        SIZE_X = 2*N+int(2*N*largerBorders);
+        SIZE_Y = int(2*N*largerBorders)+1;
     }
     else
     {
@@ -375,8 +385,20 @@ void Calculation::InitRestart(string input_file)
 
 Calculation::~Calculation()
 {
-    //dtor //TODO destroy delta
-    //TODO think about what happens if an exception is thrown
+    if(deltaNew)
+    {
+        for(int i = 0; i < SIZE_Y; ++i) {
+            delete [] deltaNew[i];
+        }
+        delete [] deltaNew;
+    }
+    if(deltaOld)
+    {
+        for(int i = 0; i < SIZE_Y; ++i) {
+            delete [] deltaNew[i];
+        }
+        delete [] deltaNew;
+    }
 }
 
 void Calculation::SetUpModel()
@@ -474,8 +496,6 @@ complex<double> Calculation::FuncDelta(Index to, Index from)
     default:
         throw runtime_error("Something went wrong in Calculation::FuncDelta");
     }
-
-    cout << "Something went wrong in Calculation::FuncDelta, (after switch)" << endl;
 //    return deltaNew[from_x][from_y]*2.0*(0.5-from_s);
 //    int to_x = to.at(0);
 //    int to_y = to.at(1);
@@ -600,7 +620,7 @@ void Calculation::ScLoop(bool writeEachDelta) //TODO funktion aufraumen
 
 void Calculation::SwapDeltas()
 {
-        Matrix<complex<double>> deltaTmp;
+        complex<double>** deltaTmp; //TODO check if that works
         deltaTmp = deltaOld;
         deltaOld = deltaNew;
         deltaNew = deltaTmp;
@@ -644,43 +664,43 @@ void Calculation::WriteDelta(int loopNr, double epsDelta)
 void Calculation::readDelta(int nr_sc_loop)
 {
     stringstream loopFileNameReal;
-    stringstream loopFileNameImag;
+//    stringstream loopFileNameImag;
 
 //    stringstream loopFileNameArg;
     if(nr_sc_loop < 10)
     {
         loopFileNameReal << DELTA_LOOP_REAL_ID << "_0" << nr_sc_loop;
-        loopFileNameImag << DELTA_LOOP_IMAG_ID << "_0" << nr_sc_loop;
+//        loopFileNameImag << DELTA_LOOP_IMAG_ID << "_0" << nr_sc_loop;
     }
     else
     {
         loopFileNameReal << DELTA_LOOP_REAL_ID <<  "_" << nr_sc_loop;
-        loopFileNameImag << DELTA_LOOP_IMAG_ID <<  "_" << nr_sc_loop;
+//        loopFileNameImag << DELTA_LOOP_IMAG_ID <<  "_" << nr_sc_loop;
     }
 
 
     double* delta_real_from_file = nullptr;
-    double* delta_imag_from_file = nullptr;
+//    double* delta_imag_from_file = nullptr;
     int rank;
     int* dims;
     FileReader::read(&delta_real_from_file, &rank, &dims, loopFileNameReal.str());
     delete [] dims;
-    FileReader::read(&delta_imag_from_file, &rank, &dims, loopFileNameImag.str());
+//    FileReader::read(&delta_imag_from_file, &rank, &dims, loopFileNameImag.str());
 
     Matrix<double> realPart = ConvertVectorToMatrix(delta_real_from_file, SIZE_X, SIZE_Y);
-    Matrix<double> imagPart = ConvertVectorToMatrix(delta_imag_from_file, SIZE_X, SIZE_Y);
+//    Matrix<double> imagPart = ConvertVectorToMatrix(delta_imag_from_file, SIZE_X, SIZE_Y);
 
-    for(unsigned int i=0; i < deltaNew.size(); i++)
+    for(int i=0; i < SIZE_X; i++) //TODO check
     {
-        for(unsigned int j=0; j < deltaNew[i].size(); j++)
+        for(int j=0; j < SIZE_Y; j++)
         {
-            deltaNew[i][j] = realPart[i][j] + i*imagPart[i][j];//TODO complex constructor calling with argument and absolute value
-            deltaOld[i][j] = realPart[i][j] + i*imagPart[i][j];
+            deltaNew[i][j] = realPart[i][j]; //+ i*imagPart[i][j];//TODO complex constructor calling with argument and absolute value
+            deltaOld[i][j] = realPart[i][j]; // + i*imagPart[i][j];
         }
     }
-    delete [] dims;
+//    delete [] dims;
     delete [] delta_real_from_file;
-    delete [] delta_imag_from_file;
+//    delete [] delta_imag_from_file;
 }
 
 vector<double> Calculation::GetRealVec(vector<complex<double>> input)
@@ -724,12 +744,12 @@ vector<double> Calculation::GetImagVec(vector<complex<double>> input)
     return output;
 }
 
-vector<complex<double>> Calculation::ConvertMatrixToVector(const Matrix<complex<double>>& input)
+vector<complex<double>> Calculation::ConvertMatrixToVector(complex<double>** input)
 {
     vector<complex<double>> out;
-    for(unsigned int i=0; i < input.size(); i++)
+    for(int i=0; i < SIZE_X; i++) //TODO check
     {
-        for(unsigned int j=0; j < input[i].size(); j++)
+        for(int j=0; j < SIZE_Y; j++)
         {
             out.push_back(input[i][j]);
         }
