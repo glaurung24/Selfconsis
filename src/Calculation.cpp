@@ -190,11 +190,12 @@ void Calculation::InitIsMagnetized(bool magnetized)
     }
     cout << SIZE_X << ", " << SIZE_Y << endl;
 
-    if(magnetized)
+    if(magnetized) //TODO !!!
     {
-        if(largerBorders)
+        if(largerBorders != 1.0)
         {
-            for(int x = SIZE_X/3; x < 2*SIZE_X/3; x++)
+            int borderLength=int(N*largerBorders);
+            for(int x = borderLength; x < SIZE_X-borderLength; x++)
             {
                 isMagnetized[x][SIZE_Y/2]=true;
             }
@@ -224,8 +225,7 @@ void Calculation::Init(std::string input_file) //TODO
 {
     inputFileName = input_file;
     ps = unique_ptr<ParameterSet>(FileParser::readParameterSet(inputFileName));
-    //Zeeman coupling
-//    counter_z = ps->getInt("counter_z");
+
     checkInit = true;
     bool change_borders = false;
     if(ps->doubleExists(LARGER_BORDERS_ID))
