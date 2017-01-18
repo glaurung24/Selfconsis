@@ -544,7 +544,6 @@ void Calculation::ScLoop(bool writeEachDelta) //TODO funktion aufraumen
     if(writeEachDelta & !sCLoopCounter)
     {
         WriteDelta(sCLoopCounter, -1);
-        //TODO write sc loop number to file
     }
 
     if(!sCLoop)
