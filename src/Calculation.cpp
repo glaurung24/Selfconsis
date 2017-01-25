@@ -526,14 +526,13 @@ void Calculation::ScLoop(bool writeEachDelta) //TODO funktion aufraumen
     }
     if(useChebyChev)
     {
+        //TODO check if a new CPropertyExtractor is necessary!
         cpe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
                     NUM_COEFFICIENTS,
-                    ENERGY_RESOLUTION/2+1,
                     useGPU,
                     false,
-                    true,
-                    -SCALE_FACTOR,
-                    0+2*SCALE_FACTOR/ENERGY_RESOLUTION));
+                    true));
+        cpe->setEnergyWindow(-SCALE_FACTOR,0+2*SCALE_FACTOR/ENERGY_RESOLUTION, ENERGY_RESOLUTION/2+1);
     }
 
     if(!useChebyChev)
@@ -828,12 +827,10 @@ void Calculation::CalcLDOS(string datasetNameLDOS, string datasetNameEigenValues
     {
         cpe = unique_ptr<CPropertyExtractor>(new CPropertyExtractor(cSolver.get(), //TODO check what CPropertyExtractor does with the pointer
                         NUM_COEFFICIENTS,
-                        ENERGY_RESOLUTION*(ulim-llim)/(2*SCALE_FACTOR),
                         useGPU,
                         false,
-                        true,
-                        llim,
-                        ulim));
+                        true));
+        cpe->setEnergyWindow(llim,ulim, ENERGY_RESOLUTION*(ulim-llim)/(2*SCALE_FACTOR));
 
         //Extract local density of states and write to file
         ldos = cpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
@@ -845,8 +842,9 @@ void Calculation::CalcLDOS(string datasetNameLDOS, string datasetNameEigenValues
         {
             dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
         }
+        dpe->setEnergyWindow(llim,ulim, ENERGY_RESOLUTION*(ulim-llim)/(2*SCALE_FACTOR));
         ldos = dpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
-                            {SIZE_X, 1, 4}, llim, ulim, ENERGY_RESOLUTION*(ulim-llim)/(2*SCALE_FACTOR));
+                            {SIZE_X, 1, 4});
         Property::EigenValues *ev = dpe->getEigenValues();
         FileWriter::writeEigenValues(ev, datasetNameEigenValues);
         delete ev;
