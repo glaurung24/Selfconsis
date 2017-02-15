@@ -87,6 +87,7 @@ class Calculation
         static double epsDelta;
         static bool verbose;
         static double largerBorders;
+        static bool calc_ysr;
         static bool useChebyChev;
         static bool printLDOSNoSc;
         static unique_ptr<ChebyshevSolver> cSolver;
@@ -126,6 +127,7 @@ class Calculation
         static const string DELTA_START_FILE_ID;
         static const string SC_LOOP_NR_HDF5_ID;
         static const string SC_LOOP_NR_HDF5_ATTR_ID;
+        static const string YSR_CALC_ID;
 };
 
 #endif // CALCULATION_H

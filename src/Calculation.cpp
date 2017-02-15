@@ -57,6 +57,7 @@ int Calculation::numberSCRuns;
 double Calculation::epsDelta;
 bool Calculation::verbose;
 double Calculation::largerBorders = 1.0;
+bool Calculation::calc_ysr = false;
 bool Calculation::useChebyChev = true;
 bool Calculation::useGPU;
 int Calculation::sCLoopCounter = 0;
@@ -102,6 +103,7 @@ const string Calculation::USE_CHEBYCHEV_ID = "UseChebyChev";
 const string Calculation::DELTA_START_FILE_ID = "DeltaStartFile";
 const string Calculation::SC_LOOP_NR_HDF5_ID = "SCLoopNr";
 const string Calculation::SC_LOOP_NR_HDF5_ATTR_ID = "SCLoopNrAttr";
+const string Calculation::YSR_CALC_ID = "CalcYSR";
 
 //void Calculation::Init()
 //{
@@ -200,6 +202,10 @@ void Calculation::InitIsMagnetized(bool magnetized)
                 isMagnetized[x][SIZE_Y/2]=true;
             }
         }
+        else if(calc_ysr)
+        {
+            isMagnetized[N][N]=true;
+        }
         else
         {
             for(int x = SIZE_X/4; x < 3*SIZE_X/4; x++)
@@ -228,6 +234,10 @@ void Calculation::Init(std::string input_file) //TODO
 
     checkInit = true;
     bool change_borders = false;
+    if(ps->boolExists(YSR_CALC_ID))
+    {
+        calc_ysr=ps->getBool(YSR_CALC_ID);
+    }
     if(ps->doubleExists(LARGER_BORDERS_ID))
     {
         largerBorders = ps->getDouble(LARGER_BORDERS_ID);
@@ -238,6 +248,12 @@ void Calculation::Init(std::string input_file) //TODO
     {
         SIZE_X = 2*N+int(2*N*largerBorders);
         SIZE_Y = int(2*N*largerBorders)+1;
+    }
+    else if(calc_ysr)
+    {
+        N=10;
+        SIZE_Y = 2*N+1;
+        SIZE_X = 2*N+1;
     }
     else
     {
