@@ -63,6 +63,7 @@ bool Calculation::useGPU;
 int Calculation::sCLoopCounter = 0;
 bool Calculation::sCLoop = true;
 bool Calculation::printLDOSNoSc = true;
+bool Calculation::calcFullLDOS = false;
 unique_ptr<ParameterSet> Calculation::ps;
 
 unique_ptr<ChebyshevSolver> Calculation::cSolver = nullptr;
@@ -104,6 +105,7 @@ const string Calculation::DELTA_START_FILE_ID = "DeltaStartFile";
 const string Calculation::SC_LOOP_NR_HDF5_ID = "SCLoopNr";
 const string Calculation::SC_LOOP_NR_HDF5_ATTR_ID = "SCLoopNrAttr";
 const string Calculation::YSR_CALC_ID = "CalcYSR";
+const string Calculation::CALC_FULL_LDOS_ID = "CalcFullLdos";
 
 //void Calculation::Init()
 //{
@@ -319,6 +321,11 @@ void Calculation::Init(std::string input_file) //TODO
         useChebyChev = ps->getBool(USE_CHEBYCHEV_ID);
     }
 
+    if(ps->boolExists(CALC_FULL_LDOS_ID))
+    {
+        calcFullLDOS = ps->getBool(CALC_FULL_LDOS_ID);
+    }
+
     outputFileName = ps->getString(OUTPUT_FILE_PATH_ID);
     //TODO add if scloop here...
     FileWriter::setFileName(outputFileName);
@@ -395,6 +402,12 @@ void Calculation::InitRestart(string input_file)
     {
         useChebyChev = ps->getBool(USE_CHEBYCHEV_ID);
     }
+
+    if(ps->boolExists(CALC_FULL_LDOS_ID))
+    {
+        calcFullLDOS = ps->getBool(CALC_FULL_LDOS_ID);
+    }
+
     readDelta(sCLoopCounter);
     printLDOSNoSc = false;
 }
@@ -849,8 +862,16 @@ void Calculation::CalcLDOS(string datasetNameLDOS, string datasetNameEigenValues
         cpe->setEnergyWindow(llim,ulim, ENERGY_RESOLUTION*(ulim-llim)/(2*SCALE_FACTOR));
 
         //Extract local density of states and write to file
-        ldos = cpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
-                            {SIZE_X, 1, 4});
+        if(!calcFullLDOS)
+        {
+            ldos = cpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
+                        {SIZE_X, 1, 4});
+        }
+        else
+        {
+             ldos = cpe->calculateLDOS({IDX_X, IDX_Y, IDX_SUM_ALL},
+                        {SIZE_X, SIZE_Y, 4});
+        }
     }
     else
     {
@@ -859,8 +880,16 @@ void Calculation::CalcLDOS(string datasetNameLDOS, string datasetNameEigenValues
             dpe = unique_ptr<DPropertyExtractor>(new DPropertyExtractor(dSolver.get()));
         }
         dpe->setEnergyWindow(llim,ulim, ENERGY_RESOLUTION*(ulim-llim)/(2*SCALE_FACTOR));
-        ldos = dpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
-                            {SIZE_X, 1, 4});
+        if(!calcFullLDOS)
+        {
+            ldos = dpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
+                        {SIZE_X, 1, 4});
+        }
+        else
+        {
+             ldos = dpe->calculateLDOS({IDX_X, IDX_Y, IDX_SUM_ALL},
+                        {SIZE_X, SIZE_Y, 4});
+        }
         Property::EigenValues *ev = dpe->getEigenValues();
         FileWriter::writeEigenValues(ev, datasetNameEigenValues);
         delete ev;

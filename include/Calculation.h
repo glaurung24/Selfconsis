@@ -90,6 +90,7 @@ class Calculation
         static bool calc_ysr;
         static bool useChebyChev;
         static bool printLDOSNoSc;
+        static bool calcFullLDOS;
         static unique_ptr<ChebyshevSolver> cSolver;
         static unique_ptr<DiagonalizationSolver> dSolver;
         static unique_ptr<CPropertyExtractor> cpe;
@@ -128,6 +129,7 @@ class Calculation
         static const string SC_LOOP_NR_HDF5_ID;
         static const string SC_LOOP_NR_HDF5_ATTR_ID;
         static const string YSR_CALC_ID;
+        static const string CALC_FULL_LDOS_ID;
 };
 
 #endif // CALCULATION_H
