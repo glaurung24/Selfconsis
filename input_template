@@ -20,3 +20,5 @@ double	LargerBorders	= 1.5
 bool	UseChebyChev	= 1
 string	DeltaStartFile	= TBTKResults.h5
 bool	CalcYSR		= 0
+bool    CalcFullLdos    = 0
+
