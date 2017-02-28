@@ -444,25 +444,25 @@ void Calculation::SetUpModel()
 
 //------------------------chemical Potential-----------------------------------
                 //Add hopping amplitudes corresponding to chemical potential
-                model.addHA(HoppingAmplitude(-mu,	{x, y, s},	{x, y, s}));
-                model.addHA(HoppingAmplitude(mu,	{x, y, s+2},	{x, y, s+2}));
+                model << HoppingAmplitude(-mu,	{x, y, s},	{x, y, s});
+                model << HoppingAmplitude(mu,	{x, y, s+2},	{x, y, s+2});
 
 //-------------------BCS interaction term------------------------------------------
 
 //                model.addHAAndHC(HoppingAmplitude(delta[x][y]*2.0*(0.5-s), {x,y,s}, {x,y,(3-s)}));
-                model.addHAAndHC(HoppingAmplitude(&Calculation::FuncDelta, {x,y,s}, {x,y,(3-s)}));
+                model << HoppingAmplitude(&Calculation::FuncDelta, {x,y,s}, {x,y,(3-s)}) + HC;
 
 
 //------------------------Nearest neighbour hopping term--------------------------------------
                 //Add hopping parameters corresponding to t
                 if(periodicBoundCond || x+1 < SIZE_X){
-                    model.addHAAndHC(HoppingAmplitude(-t,	{(x+1)%SIZE_X, y, s},	{x, y, s}));
-                    model.addHAAndHC(HoppingAmplitude(t,	{x, y, s+2},{(x+1)%SIZE_X, y, s+2}));
+                    model << HoppingAmplitude(-t,	{(x+1)%SIZE_X, y, s},	{x, y, s}) + HC;
+                    model << HoppingAmplitude(t,	{x, y, s+2},{(x+1)%SIZE_X, y, s+2}) + HC;
 //					model.addHAAndHC(HoppingAmplitude(t, {(x+1)%SIZE_X, y, s+2}, {x, y, s+2})); //same results with this line as with the line above
                 }
                 if(periodicBoundCond || y+1 < SIZE_Y){
-                    model.addHAAndHC(HoppingAmplitude(-t,	{x, (y+1)%SIZE_Y, s},	{x, y, s}));
-                    model.addHAAndHC(HoppingAmplitude(t,  {x, y, s+2}, {x, (y+1)%SIZE_Y, s+2}));
+                    model << HoppingAmplitude(-t,	{x, (y+1)%SIZE_Y, s},	{x, y, s}) + HC;
+                    model << HoppingAmplitude(t,  {x, y, s+2}, {x, (y+1)%SIZE_Y, s+2}) + HC;
 //					model.addHAAndHC(HoppingAmplitude(t,   {x, (y+1)%SIZE_Y, s+2},{x, y, s+2}));
                 }
 
@@ -471,15 +471,15 @@ void Calculation::SetUpModel()
                 if(periodicBoundCond || x+1 < SIZE_X){
     //                    model.addHAAndHC(HoppingAmplitude(alpha*2.0*(0.5-s), {(x+1)%SIZE_X, y, s*2},	{x, y, s*2+1}));
     //                    model.addHAAndHC(HoppingAmplitude(-alpha*2.0*(0.5-s), {x, y, s*2},	{(x+1)%SIZE_X, y, s*2+1}));
-                    model.addHAAndHC(HoppingAmplitude(alpha *2.0*(0.5-s), {(x+1)%SIZE_X,y,(s+1)%2}, {x,y,s}));
-                    model.addHAAndHC(HoppingAmplitude(-alpha *2.0*(0.5-s), {x,y,s+2}, {(x+1)%SIZE_X,y,(s+1)%2+2}));
+                    model << HoppingAmplitude(alpha *2.0*(0.5-s), {(x+1)%SIZE_X,y,(s+1)%2}, {x,y,s}) + HC;
+                    model << HoppingAmplitude(-alpha *2.0*(0.5-s), {x,y,s+2}, {(x+1)%SIZE_X,y,(s+1)%2+2}) + HC;
                 }
 
                 if(periodicBoundCond || y+1 < SIZE_Y){
     //                    model.addHAAndHC(HoppingAmplitude(i*alpha*2.0*(0.5-s),	{x, (y+1)%SIZE_Y, s*2},	{x, y, s*2+1}));
     //                    model.addHAAndHC(HoppingAmplitude(-i*alpha*2.0*(0.5-s),  {x, y, s*2}, {x, (y+1)%SIZE_Y, s*2+1}));
-                    model.addHAAndHC(HoppingAmplitude(i*alpha, {x,(y+1)%SIZE_Y,(s+1)%2}, {x,y,s}));
-                    model.addHAAndHC(HoppingAmplitude(-i*alpha, {x,y,s+2}, {x,(y+1)%SIZE_Y,(s+1)%2+2}));
+                    model << HoppingAmplitude(i*alpha, {x,(y+1)%SIZE_Y,(s+1)%2}, {x,y,s}) + HC;
+                    model << HoppingAmplitude(-i*alpha, {x,y,s+2}, {x,(y+1)%SIZE_Y,(s+1)%2+2}) + HC;
 
                 }
 
@@ -488,8 +488,8 @@ void Calculation::SetUpModel()
 
 //---------------------------Zeeman term------------------------------------------
                 if(isMagnetized[x][y]){
-                    model.addHA(HoppingAmplitude(z*2.0*(0.5-s), {x, y, s}, {x, y, s}));
-                    model.addHA(HoppingAmplitude(-z*2.0*(0.5-s), {x, y, s+2}, {x, y, s+2}));
+                    model << HoppingAmplitude(z*2.0*(0.5-s), {x, y, s}, {x, y, s});
+                    model << HoppingAmplitude(-z*2.0*(0.5-s), {x, y, s+2}, {x, y, s+2});
                 }
             }
         }
@@ -847,7 +847,6 @@ void Calculation::CalcLDOS(string datasetNameLDOS, string datasetNameEigenValues
         dSolver->run();
     }
 
-    Property::LDOS *ldos = nullptr;
 
     const double ulim = 1;
     const double llim = -1;
@@ -864,13 +863,15 @@ void Calculation::CalcLDOS(string datasetNameLDOS, string datasetNameEigenValues
         //Extract local density of states and write to file
         if(!calcFullLDOS)
         {
-            ldos = cpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
+            Property::LDOS ldos = cpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
                         {SIZE_X, 1, 4});
+            FileWriter::writeLDOS(ldos, datasetNameLDOS);
         }
         else
         {
-             ldos = cpe->calculateLDOS({IDX_X, IDX_Y, IDX_SUM_ALL},
+            Property::LDOS ldos = cpe->calculateLDOS({IDX_X, IDX_Y, IDX_SUM_ALL},
                         {SIZE_X, SIZE_Y, 4});
+            FileWriter::writeLDOS(ldos, datasetNameLDOS);
         }
     }
     else
@@ -882,20 +883,19 @@ void Calculation::CalcLDOS(string datasetNameLDOS, string datasetNameEigenValues
         dpe->setEnergyWindow(llim,ulim, ENERGY_RESOLUTION*(ulim-llim)/(2*SCALE_FACTOR));
         if(!calcFullLDOS)
         {
-            ldos = dpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
+            Property::LDOS ldos = dpe->calculateLDOS({IDX_X, SIZE_Y/2, IDX_SUM_ALL},
                         {SIZE_X, 1, 4});
+            FileWriter::writeLDOS(ldos, datasetNameLDOS);
         }
         else
         {
-             ldos = dpe->calculateLDOS({IDX_X, IDX_Y, IDX_SUM_ALL},
+            Property::LDOS ldos = dpe->calculateLDOS({IDX_X, IDX_Y, IDX_SUM_ALL},
                         {SIZE_X, SIZE_Y, 4});
+            FileWriter::writeLDOS(ldos, datasetNameLDOS);
         }
-        Property::EigenValues *ev = dpe->getEigenValues();
+        Property::EigenValues ev = dpe->getEigenValues();
         FileWriter::writeEigenValues(ev, datasetNameEigenValues);
-        delete ev;
     }
-    FileWriter::writeLDOS(ldos, datasetNameLDOS);
-    delete ldos;
 }
 
 void Calculation::writeScLoopNr()
