@@ -529,9 +529,9 @@ void Calculation::InitArnoldi(string input_file)
     couplingPotential = ps->getComplex(COUPLING_POT_ID);
     periodicBoundCond = ps->getBool(PERIODIC_BOUND_ID);
 
-    NUM_COEFFICIENTS = ps->getInt(NR_CHEBYCHEV_COEFF_ID);
+//    NUM_COEFFICIENTS = ps->getInt(NR_CHEBYCHEV_COEFF_ID);
     ENERGY_RESOLUTION = ps->getInt(ENERGY_RESOLUTION_ID);
-    SCALE_FACTOR = ps->getDouble(SCALE_FACTOR_ID);
+//    SCALE_FACTOR = ps->getDouble(SCALE_FACTOR_ID);
 
 
 
@@ -561,7 +561,7 @@ void Calculation::InitArnoldi(string input_file)
         InitDelta();
     }
 
-    epsDelta = ps->getDouble(EPSILON_DELTA_ID);
+//    epsDelta = ps->getDouble(EPSILON_DELTA_ID);
     InitIsMagnetized(ps->getBool(IS_MAGNETIZED_ID));
 
 
@@ -570,7 +570,7 @@ void Calculation::InitArnoldi(string input_file)
     FileWriter::setFileName(outputFileName);
     FileReader::setFileName(outputFileName);
     FileWriter::clear();
-    if(ps->doubleExists("Interpolate"))
+    if(ps->doubleExists("Interpolate") && sCLoopCounter != ps->getInt(SC_LOOP_NR_ID + "2"))
     {
         WriteDelta(sCLoopCounter, -1);
         WriteDelta(ps->getInt(SC_LOOP_NR_ID + "2"), -1);
