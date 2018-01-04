@@ -252,8 +252,8 @@ void Calculation::InitDeltaInterpolate(int sCLoopCounter1, int sCLoopCounter2, s
     {
         for(int j=0; j < SIZE_Y; j++)
         {
-            deltaNew[i][j] = realPart1[i][j]*interp + realPart2[i][j]*(1.0-interp); //+ i*imagPart[i][j];//TODO complex constructor calling with argument and absolute value
-            deltaOld[i][j] = realPart1[i][j]*interp + realPart2[i][j]*(1.0-interp); // + i*imagPart[i][j];
+            deltaNew[i][j] = realPart1[i][j]*(1.0-interp) + realPart2[i][j]*interp; //+ i*imagPart[i][j];//TODO complex constructor calling with argument and absolute value
+            deltaOld[i][j] = realPart1[i][j]*(1.0 - interp) + realPart2[i][j]*interp; // + i*imagPart[i][j];
         }
     }
 //    delete [] dims;
