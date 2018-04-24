@@ -110,6 +110,10 @@ const string Calculation::SC_LOOP_NR_HDF5_ATTR_ID = "SCLoopNrAttr";
 const string Calculation::YSR_CALC_ID = "CalcYSR";
 const string Calculation::CALC_FULL_LDOS_ID = "CalcFullLdos";
 
+
+const int Calculation::NUM_EIGEN_VALUES = 300;// 1600;
+const int Calculation::NUM_LANCZOS_VECTORS = 600; // 3200;
+
 //void Calculation::Init()
 //{
 //    checkInit = true;
@@ -682,8 +686,6 @@ void Calculation::runASolver()
     }
     if(!aSolver)
     {
-        const int NUM_EIGEN_VALUES = 300;// 1600;
-        const int NUM_LANCZOS_VECTORS = 600; // 3200;
         int MAX_ITERATIONS = 4000;
         aSolver = unique_ptr<ArnoldiSolver>( new ArnoldiSolver());
         aSolver->setMode(ArnoldiSolver::Mode::ShiftAndInvert);
@@ -738,9 +740,33 @@ void Calculation::aPropertyExtractor()
 
 	Property::WaveFunction wf = ape->calculateWaveFunction(
 		{{IDX_ALL,		SIZE_Y/2,	IDX_ALL}},
-		{0}
+		{NUM_EIGEN_VALUES/2}
 	);
-	FileWriter::writeWaveFunction(wf);
+	FileWriter::writeWaveFunction(wf, "WaveFunctionMF");
+
+	wf = ape->calculateWaveFunction(
+		{{IDX_ALL,		SIZE_Y/2,	IDX_ALL}},
+		{NUM_EIGEN_VALUES/2+1}
+	);
+	FileWriter::writeWaveFunction(wf, "WaveFunction_1");
+
+	wf = ape->calculateWaveFunction(
+		{{IDX_ALL,		SIZE_Y/2,	IDX_ALL}},
+		{NUM_EIGEN_VALUES/2+2}
+	);
+	FileWriter::writeWaveFunction(wf, "WaveFunction_2");
+
+    wf = ape->calculateWaveFunction(
+		{{IDX_ALL,		IDX_ALL,	IDX_ALL}},
+		{NUM_EIGEN_VALUES/2}
+	);
+	FileWriter::writeWaveFunction(wf, "WaveFunctionMFFull");
+
+	wf = ape->calculateWaveFunction(
+		{{IDX_ALL,		IDX_ALL,	IDX_ALL}},
+		{NUM_EIGEN_VALUES/2+1}
+	);
+	FileWriter::writeWaveFunction(wf, "WaveFunction_1Full");
 }
 
 

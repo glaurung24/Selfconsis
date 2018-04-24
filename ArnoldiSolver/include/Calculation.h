@@ -138,6 +138,9 @@ class Calculation
         static const string SC_LOOP_NR_HDF5_ATTR_ID;
         static const string YSR_CALC_ID;
         static const string CALC_FULL_LDOS_ID;
+
+        static const int NUM_EIGEN_VALUES;
+        static const int NUM_LANCZOS_VECTORS;
 };
 
 #endif // CALCULATION_H
